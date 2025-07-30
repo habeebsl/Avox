@@ -9,9 +9,6 @@ load_dotenv()
 
 app = FastAPI()
 
-app.include_router(clone_router, prefix="/api/clones")
-app.include_router(ws, prefix="/ws/ads")
-
 origins = [
     os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
 ]
@@ -23,3 +20,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(clone_router, prefix="/api/clones")
+app.include_router(ws, prefix="/ws/ads")
+
+@app.get("/api/health")
+def health_check():
+    """Health check endpoint for monitoring or CronJobs."""
+    return {"status": "ok"}
