@@ -7,4 +7,4 @@ set -e
 pip install -r requirements.txt
 
 # Install Playwright browsers (Chromium, Firefox, WebKit)
-python -m playwright install chromium
+python -m playwright install
