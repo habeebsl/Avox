@@ -3,14 +3,12 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class WeatherCondition(BaseModel):
-    """Weather condition model"""
     text: str = Field(..., min_length=1, max_length=100)
     icon: Optional[str] = None
     code: Optional[int] = None
 
 
 class ForecastData(BaseModel):
-    """Forecast data model"""
     forecast_day: str = Field(..., min_length=1)
     average_temp_in_celcius: Optional[float] = Field(None, ge=-50, le=60)
     average_humidity: Optional[int] = Field(None, ge=0, le=100)
@@ -26,7 +24,6 @@ class ForecastData(BaseModel):
     
 
 class HistoricalWeatherData(BaseModel):
-    """Historical weather data model"""
     date: str
     average_temp_in_celcius: Optional[float] = Field(None, ge=-50, le=60)
     average_humidity: Optional[int] = Field(None, ge=0, le=100)

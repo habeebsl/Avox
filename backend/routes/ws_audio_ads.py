@@ -3,8 +3,10 @@ import json
 import logging
 from typing import Optional
 from fastapi import WebSocket, APIRouter
+
 from schemas.speech_generator_schemas import VoiceData
 from schemas.ws_schemas import AdRequest
+
 from utils.redis_utils import VoiceSlotManager
 from utils.speech_generator_utils.speech_generator import create_speech_generator
 from utils.ws_utils.dataclasses import AdProcessingState, StepResult, StepStatus
@@ -96,7 +98,6 @@ async def process_ad_with_granular_handling(
         )
 
         if state.insights.status == StepStatus.FAILED:
-            # Send summary and return - can't continue without insights
             return
 
         # Step 3: Generate transcript
@@ -233,10 +234,8 @@ async def generate_audio_ads(websocket: WebSocket):
                 
                 if message["type"] == "websocket.receive":
                     if "bytes" in message:
-                        # This is a music buffer
                         music_buffers.append(message["bytes"])
                     elif "text" in message:
-                        # This is a JSON message
                         json_data = json.loads(message["text"])
                         if json_data.get("type") == "finished":
                             break
@@ -247,9 +246,6 @@ async def generate_audio_ads(websocket: WebSocket):
                 logger.error(f"Error receiving message: {e}")
                 break
 
-        # Now process with all the data
-        # You can use music_buffers here as needed
-        
         # Process all locations with granular handling
         tasks = [
             asyncio.create_task(

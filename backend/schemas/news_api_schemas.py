@@ -4,7 +4,6 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class NewsArticle(BaseModel):
-    """News article model"""
     title: str = Field(..., min_length=1, max_length=500)
     snippet: Optional[str] = Field(None, max_length=1000)
     
@@ -18,7 +17,6 @@ class NewsArticle(BaseModel):
 
 
 class NewsResponse(BaseModel):
-    """News response model"""
     query: str = Field(..., min_length=1)
     articles: List[NewsArticle] = Field(default_factory=list)
     timestamp: float = Field(default_factory=time.time)

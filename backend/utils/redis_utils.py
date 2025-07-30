@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import asyncio
 import secrets
 import string
 from redis.asyncio import Redis

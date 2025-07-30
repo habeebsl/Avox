@@ -3,7 +3,6 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class VoiceData(BaseModel):
-    """Voice data model"""
     voice_name: str = Field(..., min_length=1, max_length=100)
     voice_id: str = Field(..., min_length=1)
     description: Optional[str] = None
@@ -16,7 +15,6 @@ class VoiceData(BaseModel):
 
 
 class SpeechRequest(BaseModel):
-    """Speech generation request model"""
     text: str = Field(..., min_length=1, max_length=50000)
     voice_id: str = Field(..., min_length=1)
     speed: float = Field(default=1.12, ge=0.25, le=4.0)

@@ -1,7 +1,11 @@
+import os
 from fastapi import FastAPI
+from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from routes.clone import clone_router
 from routes.ws_audio_ads import ws
+
+load_dotenv()
 
 app = FastAPI()
 
@@ -9,10 +13,7 @@ app.include_router(clone_router, prefix="/api/clones")
 app.include_router(ws, prefix="/ws/ads")
 
 origins = [
-    "http://localhost",
-    "http://localhost:3000",
-    "http://127.0.0.1:8000",
-    "*"
+    os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
 ]
 
 app.add_middleware(

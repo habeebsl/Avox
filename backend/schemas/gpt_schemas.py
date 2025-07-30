@@ -15,20 +15,6 @@ class ResponseSchema(BaseModel):
     results: List[ResultItem]
 
 
-class Slang(BaseModel):
-    slang: str
-    pronounciation: str
-    meaning: str
-    usage_context: str
-    example: str
-    popularity: str
-    region: str
-
-class SlangsResponse(BaseModel):
-    country: str
-    slangs: list[Slang]
-    sources: list[str]
-
 class TranscriptRequest(BaseModel):
     user_prompt: str = Field(..., min_length=10)
     with_forecast: bool = Field(default=False)
@@ -45,8 +31,22 @@ class TranscriptRequest(BaseModel):
             raise ValueError("`forecast_days` should be None when `with_forecast=False`")
         return v
 
+
+class Slang(BaseModel):
+    slang: str
+    pronounciation: str
+    meaning: str
+    usage_context: str
+    example: str
+    popularity: str
+    region: str
+
+class SlangsResponse(BaseModel):
+    country: str
+    slangs: list[Slang]
+    sources: list[str]
+
 class SlangRequest(BaseModel):
-    """Request model for slang generation"""
     country: str = Field(..., min_length=2, max_length=50)
     
     @field_validator('country')
