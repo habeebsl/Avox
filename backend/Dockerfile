@@ -9,6 +9,7 @@ RUN apt-get update -q && \
         libxdamage1 \
         libatk1.0-0 \
         libasound2 \
+        libasound2-dev \
         libdbus-1-3 \
         libnspr4 \
         libgbm1 \
