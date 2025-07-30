@@ -49,11 +49,11 @@ export const wsService = {
                 return;
             }
 
-            const { updateAd, ads,nullifyAllPendingRequests } = useAdData.getState();
+            const { updateAd, ads, nullifyAllPendingRequests } = useAdData.getState();
             let targetAd = null;
 
             console.log("Data Type: ", resData.type)
-            v
+            
             if (resData.index !== undefined) {
                 targetAd = ads.find(ad => ad.index === resData.index);
             }
