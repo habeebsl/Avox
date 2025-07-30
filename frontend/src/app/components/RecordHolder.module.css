@@ -43,7 +43,7 @@
 .notificationIndicator {
   position: absolute;
   top: 0;
-  right: 1;
+  right: 0;
   width: 12px;
   height: 12px;
   background: black;
