@@ -244,7 +244,7 @@ const TranscriptSync: React.FC<TranscriptSyncProps> = ({
       <div className={styles.transcript}>
         {isLoading && <LoadingState theme={theme} />}
         {hasError && <ErrorState theme={theme} showRetry={false} />}
-        {isNull && !isLoading && !hasError && <NullState theme={theme} />}
+        {isNull && !isLoading && !hasError && <NullState />}
         {(!isLoading && !hasError && !isNull && processedSentences?.map((sentence, index) => (
           <div
             key={index}

@@ -146,13 +146,13 @@ export default function Home() {
       ) : null}
 
       {showNextButton && (
-        <div className="fixed right-50 top-20">
+        <div className="fixed right-4 top-20 md:right-50">
           <button
             onClick={handleNext}
             disabled={disableNextButton}
-            className={`px-8 py-3 rounded-[7px] font-medium ${
+            className={`px-6 py-3 md:px-8 rounded-[7px] font-medium text-sm md:text-base min-w-[80px] ${
               !disableNextButton
-                ? 'bg-white text-black hover:bg-gray-300'
+                ? 'bg-white text-black hover:bg-gray-300 active:bg-gray-400'
                 : 'bg-gray-800 text-gray-500 cursor-not-allowed'
             }`}
           >
@@ -160,6 +160,7 @@ export default function Home() {
           </button>
         </div>
       )}
+      
       <ErrorNotification
         title={title}
         message={message}

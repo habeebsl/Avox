@@ -21,7 +21,7 @@
     0 8px 32px rgba(0, 0, 0, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
   position: relative;
-  overflow: hidden;
+  /* overflow: hidden; */
 }
 
 .holderButton:hover {
@@ -40,6 +40,34 @@
     inset 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.notificationIndicator {
+  position: absolute;
+  top: 0;
+  right: 4;
+  width: 12px;
+  height: 12px;
+  background: black;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  z-index: 20;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 .holderInner {
   position: relative;
   width: 100%;
@@ -47,37 +75,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.recordStack {
-  position: absolute;
-  width: 30px;
-  height: 30px;
-  opacity: 0.6;
-}
-
-.record {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.record:nth-child(1) {
-  transform: translateY(-2px) scale(0.9);
-  z-index: 1;
-}
-
-.record:nth-child(2) {
-  transform: translateY(0px) scale(0.95);
-  z-index: 2;
-}
-
-.record:nth-child(3) {
-  transform: translateY(2px) scale(1);
-  z-index: 3;
 }
 
 .vinylIcon {
@@ -145,7 +142,6 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* margin-bottom: 16px; */
   padding-bottom: 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -224,11 +220,16 @@
   
   .slidingContainer {
     width: 180px;
-    top: 60px; /* Changed from bottom: 60px to top: 60px */
+    top: 60px;
   }
   
   .vinylIcon {
     width: 20px;
     height: 20px;
+  }
+  
+  .notificationIndicator {
+    width: 10px;
+    height: 10px;
   }
 }

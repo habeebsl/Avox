@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import useAdData from '../store/adDataStore';
+import useNotificationStore from '../store/notificationStore';
 import { AdCube } from './AdCube';
 import styles from './RecordHolder.module.css';
 
@@ -12,15 +13,39 @@ interface RecordHolderProps {
 export const RecordHolder: React.FC<RecordHolderProps> = ({ className = '' }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
-  const { ads } = useAdData()
+  const [hasNewNotifications, setHasNewNotifications] = useState(true);
+  const { ads } = useAdData();
+  const { notifications } = useNotificationStore();
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastNotificationCountRef = useRef(0);
+
+  // Track new notifications and show indicator
+  useEffect(() => {
+    console.log(hasNewNotifications)
+    const relevantNotifications = notifications.filter(notif => 
+      notif.type === 'ready' || notif.type === 'error' || notif.type === 'batch'
+    );
+    
+    const currentCount = relevantNotifications.length;
+    
+    if (currentCount > lastNotificationCountRef.current && !isOpen) {
+      setHasNewNotifications(true);
+    }
+    
+    lastNotificationCountRef.current = currentCount;
+  }, [notifications, isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setHasNewNotifications(false);
+    }
+  }, [isOpen]);
 
   const toggleOpen = () => {
     if (isAnimating) return;
     setIsAnimating(true);
     setIsOpen(!isOpen);
-    
-    // Reset animation state after animation completes
+
     setTimeout(() => {
       setIsAnimating(false);
     }, 300);
@@ -33,13 +58,12 @@ export const RecordHolder: React.FC<RecordHolderProps> = ({ className = '' }) =>
         className={`${styles.holderButton} ${isOpen ? styles.open : ''}`}
         onClick={toggleOpen}
       >
-        <div className={styles.holderInner}>
-          <div className={styles.recordStack}>
-            <div className={styles.record}></div>
-            <div className={styles.record}></div>
-            <div className={styles.record}></div>
-          </div>
-          
+        {/* Notification Indicator */}
+        {hasNewNotifications && (
+          <div className={styles.notificationIndicator} />
+        )}
+        
+        <div className={styles.holderInner}>          
           {/* Vinyl record icon */}
           <div className={styles.vinylIcon}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">

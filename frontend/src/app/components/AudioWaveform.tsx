@@ -79,7 +79,6 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
     return undefined;
   }, [isMusicEnabled, musicAudioSrc, nonMusicAudioSrc, hasOnlyMusic, hasOnlyNonMusic]);
 
-  // Zustand store
   const {
     currentTime,
     duration,

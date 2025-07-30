@@ -19,26 +19,19 @@ const countries: Country[] = [
   { name: 'United Kingdom', code: 'GB' },
   { name: 'Canada', code: 'CA' },
   { name: 'Australia', code: 'AU' },
-  { name: 'Germany', code: 'DE' },
-  { name: 'France', code: 'FR' },
   { name: 'Japan', code: 'JP' },
   { name: 'Brazil', code: 'BR' },
   { name: 'India', code: 'IN' },
-  { name: 'China', code: 'CN' },
-  { name: 'Nigeria', code: 'NG' }
+  { name: 'Nigeria', code: 'NG' },
+  { name: 'Spain', code: "ES" }
 ];
 
 const languages: Language[] = [
   { name: 'English', code: 'en' },
   { name: 'Spanish', code: 'es' },
-  { name: 'French', code: 'fr' },
-  { name: 'German', code: 'de' },
-  { name: 'Italian', code: 'it' },
-  { name: 'Portuguese', code: 'pt' },
   { name: 'Japanese', code: 'ja' },
-  { name: 'Chinese', code: 'zh' },
-  { name: 'Korean', code: 'ko' },
   { name: 'Hindi', code: 'hi' },
+  { name: 'Spanish', code: 'es' }
 ];
 
 const VoiceSelectionForm = () => {
@@ -64,6 +57,9 @@ const VoiceSelectionForm = () => {
     { value: 7, label: '7 days' },
     { value: 14, label: '14 days' },
   ];
+
+  const sortedCountries = [...countries].sort((a, b) => a.name.localeCompare(b.name));
+  const sortedLanguages = [...languages].sort((a, b) => a.name.localeCompare(b.name));
 
   const handleCountrySelect = (country: Country) => {
     if (voiceMode === 'custom') {
@@ -118,7 +114,6 @@ const VoiceSelectionForm = () => {
     setLocations(selectedCountries)
 
     if (selectedCountries.length > 0) {
-      // console.log(selectedCountries.length)
       if (adType === "default") {
         setDisableNextButton(false)
       } 
@@ -245,7 +240,7 @@ const VoiceSelectionForm = () => {
 
               {isCountryDropdownOpen && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800/95 backdrop-blur-md border border-gray-600 rounded-2xl max-h-56 overflow-y-auto z-30 shadow-2xl">
-                  {countries.map((country) => {
+                  {sortedCountries.map((country) => {
                     const isSelected = selectedCountries.find(c => c.code === country.code);
                     const canSelect = !isSelected && !isCountryLimitReached;
                     const isDisabled = !isSelected && isCountryLimitReached;
@@ -334,7 +329,7 @@ const VoiceSelectionForm = () => {
 
                 {isLanguageDropdownOpen && (
                   <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800/95 backdrop-blur-md border border-gray-600 rounded-2xl max-h-56 overflow-y-auto z-30 shadow-2xl">
-                    {languages.map((language) => (
+                    {sortedLanguages.map((language) => (
                       <div
                         key={language.code}
                         onClick={() => {

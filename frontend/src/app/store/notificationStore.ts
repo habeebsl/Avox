@@ -25,7 +25,6 @@ interface NotificationState {
   batchedUpdates: BatchedUpdate[];
   batchTimer: NodeJS.Timeout | null;
 
-  // Actions
   addNotification: (notification: Omit<Notification, 'id' | 'timestamp'>) => void;
   removeNotification: (id: string) => void;
   setActiveTrack: (index: number | null) => void;
@@ -76,19 +75,12 @@ const useNotificationStore = create<NotificationState>((set, get) => ({
 
     // Strategy implementation
     if (isActiveTrack) {
-      // IMMEDIATE: Show all updates for active track
       get().addNotification(createActiveTrackNotification(trackIndex, type));
     } else {
-      // BACKGROUND: Handle based on type
       if (type === 'error') {
-        // Errors always immediate
         get().addNotification(createErrorNotification(trackIndex));
       } else if (type === 'ready') {
-        // Batch ready notifications
         get().addToBatch(trackIndex, 'ready');
-      } else if (type === 'loading') {
-        // Silent - just update visual indicators
-        // No notification, handled by AdCube visual state
       }
     }
   },
@@ -111,14 +103,13 @@ const useNotificationStore = create<NotificationState>((set, get) => ({
       }));
     }
 
-    // Clear existing timer and set new one
     if (batchTimer) {
       clearTimeout(batchTimer);
     }
 
     const newTimer = setTimeout(() => {
       get().processBatchedUpdates();
-    }, 5000); // 5 second batching
+    }, 5000);
 
     set({ batchTimer: newTimer });
   },
@@ -145,7 +136,11 @@ const useNotificationStore = create<NotificationState>((set, get) => ({
 }));
 
 // Helper functions for creating notifications
-function createActiveTrackNotification(trackIndex: number, type: string): Omit<Notification, 'id' | 'timestamp'> {
+function createActiveTrackNotification(
+  trackIndex: number, 
+  type: string
+): Omit<Notification, 'id' | 'timestamp'> {
+
   const baseTrack = `Track ${trackIndex + 1}`;
   
   switch (type) {

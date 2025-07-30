@@ -2,20 +2,18 @@ import React from 'react';
 import styles from './NullState.module.css';
 
 interface NullStateProps {
-  theme: string;
   title?: string;
   message?: string;
   icon?: React.ReactNode;
 }
 
 const NullState: React.FC<NullStateProps> = ({ 
-  theme, 
   title = "No Transcript Available",
   message = "Audio transcription is not available for this content yet. Try selecting a different audio source or check back later.",
   icon
 }) => {
   const DefaultIcon = () => (
-    <svg viewBox="0 0 24 24" fill={theme} xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 24 24" fill='#808080' xmlns="http://www.w3.org/2000/svg">
       <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
       <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g>
       <g id="SVGRepo_iconCarrier"> 
@@ -28,7 +26,7 @@ const NullState: React.FC<NullStateProps> = ({
   return (
     <div className={styles.container}>
       <div className={styles.content}>
-        <div className={styles.icon} style={{ color: `${theme}60` }}>
+        <div className={styles.icon} style={{ color: `#80808060` }}>
           {icon || <DefaultIcon />}
         </div>
         <h3 className={styles.title}>{title}</h3>

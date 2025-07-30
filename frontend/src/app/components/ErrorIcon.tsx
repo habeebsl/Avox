@@ -16,7 +16,6 @@ export default function ErrorIcon({ size = 24, className = "" }: ErrorIconProps)
 
   return (
     <div className={`relative inline-flex items-center justify-center ${className}`}>
-      {/* Blast radius rings */}
       <div 
         className={`
           absolute inset-0 rounded-full border-2 border-red-500/30
@@ -39,7 +38,6 @@ export default function ErrorIcon({ size = 24, className = "" }: ErrorIconProps)
         }}
       />
       
-      {/* Main error icon */}
       <div 
         className={`
           relative z-10 bg-red-500 rounded-full flex items-center justify-center

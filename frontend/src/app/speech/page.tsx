@@ -15,7 +15,6 @@ export default function SpeechPage() {
 
   useEffect(() => {
     if (locations) {
-      console.log("clone recordings length: ", cloneRecordings.length)
       if (adType === "custom" && cloneRecordings.length > 0) {
         populateAds(locations)
         setActiveIndex(0)
@@ -31,7 +30,7 @@ export default function SpeechPage() {
   }, [])
   
   return (
-    <div className="flex h-screen w-full justify-between">
+    <div className="bg-black flex h-screen w-full justify-between">
       <ToastContainer />
       <div className="w-[40%] flex justify-center items-center">
         <SmoothSplineWaveform
