@@ -9,13 +9,13 @@ class CountryData(BaseModel):
     name: str
 
 class AdRequest(BaseModel):
+    product_name: str
     product_summary: str
     offer_summary: str
     cta: str
     locations: list[CountryData]
     ad_type: Literal["custom", "default"]
-    audio_recordings: list[AudioBuffer]
-    slot_reservation_id: str
+    slot_reservation_id: Optional[str]
     use_weather: bool
     forecast_type: Optional[Literal[1, 7, 14]]
     clone_language: Optional[str]

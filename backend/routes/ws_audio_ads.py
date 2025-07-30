@@ -1,156 +1,56 @@
 import asyncio
 import json
 import logging
-from typing import Union, Optional
-from fastapi import APIRouter, WebSocket
-
-from prompts import transcript_prompts
+from typing import Optional
+from fastapi import WebSocket, APIRouter
 from schemas.speech_generator_schemas import VoiceData
 from schemas.ws_schemas import AdRequest
-from schemas.gpt_schemas import ResponseSchema, TranscriptRequest
-
-from utils.mixer_utils.audio_mixer import create_audio_mixer
-from utils.musicgen_utils.musicgen import MusicGen
-from utils.deepl_utils import translate
-from utils.gpt_utils.gpts import create_gpt_client
-from utils.taste_api_utils.taste_api import create_taste_api
-from utils.speech_generator_utils.speech_generator import create_speech_generator
-from utils.speech_generator_utils.helpers import map_timestamps_to_transcript
-from utils.trends_scraper import GoogleTrendsScraper
-from utils.news_utils.news_api import create_news_api
-from utils.weather_utils.weather_api import create_weather_api
 from utils.redis_utils import VoiceSlotManager
+from utils.speech_generator_utils.speech_generator import create_speech_generator
+from utils.ws_utils.dataclasses import AdProcessingState, StepResult, StepStatus
+from utils.ws_utils.steps.insights import step_gather_insights
+from utils.ws_utils.steps.merge import step_merge_audio
+from utils.ws_utils.steps.music import step_generate_music
+from utils.ws_utils.steps.speech import step_generate_speech
+from utils.ws_utils.steps.transcript import step_generate_transcript
+from utils.ws_utils.ws_helpers import (
+    ensure_voice_data_object, 
+    safe_send_websocket_message, 
+    cleanup_custom_voice)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 ws = APIRouter()
 
-async def get_insights(location: str):
-    """Get taste insights for a location."""
-    async with create_taste_api(location) as taste:
-        taste_data = await taste.get_all_insights()
-        return taste_data
-        
-async def get_trends(country_code: str):
-    """Get trending topics and related news for a country."""
-    async with GoogleTrendsScraper(headless=True) as scraper:
-        trends = await scraper.scrape_trending_topics(country_code.upper(), hours=168)
-        if not trends:
-            return []
-        
-    trends_list = []
-    for topic in trends:
-        query = topic.query
-        trends_list.append(query)
-
-    async with create_news_api() as news_api:
-        news_list = await news_api.get_news_for_query_list(
-            trends_list, 
-            country_code.lower()
-        )
-        return [news.model_dump() for news in news_list]
-    
-async def get_forecast_info(country_name: str, use_weather: bool, days: Union[str, None] = None):
-    """Get weather forecast information if weather is enabled."""
-    if not use_weather or not days:
-        return None
-        
-    async with create_weather_api() as weather_api:
-        forecast_data = await weather_api.get_forecast(country_name, days)
-        return [forecast.model_dump() for forecast in forecast_data]
-
-async def get_slangs(country_name: str):
-    """Get local slangs for a country."""
-    async with create_gpt_client() as gpt:
-        slangs = await gpt.get_slangs(country_name)
-        return slangs.model_dump()
-
-def ensure_voice_data_object(voice_data_source) -> VoiceData:
-    """Ensure voice data is a VoiceData object, not a dictionary."""
-    if isinstance(voice_data_source, dict):
-        return VoiceData(
-            voice_name=voice_data_source.get("voice_name", ""),
-            voice_id=voice_data_source.get("voice_id", ""),
-            labels=voice_data_source.get("labels", {})
-        )
-    return voice_data_source
-
-async def generate_ad_speech(
-    websocket: WebSocket,
-    index: int,
-    location: str,
-    transcript_results: ResponseSchema, 
-    voice_data: VoiceData
+async def process_ad_with_granular_handling(
+    websocket: WebSocket, 
+    index: int, 
+    data: AdRequest, 
+    voices: list[VoiceData],
+    recordings: list[bytes]
 ):
-    """Generate speech audio for an ad."""
-    try:
-        transcript_data = transcript_results.results[0]
-        
-        english_transcript = transcript_data.transcript
-        translation = None
-        language = voice_data.labels.get("language")
-        
-        if language and language != 'en':
-            translation = await translate(english_transcript, "EN", language.upper())
+    """Process ad with granular error handling and status tracking."""
+    location = data.locations[index]
+    
+    # Initialize processing state
+    state = AdProcessingState(
+        index=index,
+        location=location.name,
+        insights=StepResult(StepStatus.PENDING, step_name="insights"),
+        transcript=StepResult(StepStatus.PENDING, step_name="transcript"),
+        speech=StepResult(StepStatus.PENDING, step_name="speech"),
+        music=StepResult(StepStatus.PENDING, step_name="music"),
+        merge=StepResult(StepStatus.PENDING, step_name="merge"),
+        voice_cleanup=StepResult(StepStatus.PENDING, step_name="voice_cleanup")
+    )
 
-        async with create_speech_generator() as labs:
-            transcript = translation if translation else english_transcript
-
-            audio_buffer = await labs.generate_speech(
-                transcript,
-                voice_data.voice_name,
-                voice_data.voice_id
-            )
-
-            if not audio_buffer:
-                raise ValueError("Voice generation failed")
-
-            forced_alignment = await labs.get_forced_alignment(
-                transcript,
-                audio_buffer
-            )
-
-        sentence_alignment = None
-        if forced_alignment:
-            sentence_alignment = await map_timestamps_to_transcript(
-                transcript,
-                forced_alignment.words
-            )
-
-        response_data = {
-            "type": "speech_done",
-            "location": location,
-            "index": index,
-            "speech_buffer": audio_buffer,
-            "transcript_data": transcript_results,
-            "translation_transcript": translation,
-            "alignment": sentence_alignment
-        }
-
-        await websocket.send_json(response_data)
-        return response_data
-        
-    except Exception as e:
-        logger.error(f"Error in [generate_ad_speech] for index {index}: {e}")
-        error_response = {"type": "error", "index": index, "message": str(e)}
-        await websocket.send_json(error_response)
-        raise
-
-async def process_ad(websocket: WebSocket, index: int, data: AdRequest, voices: list[VoiceData]):
-    """Process a single ad for a specific location."""
     voice_id: Optional[str] = None
     slot_manager = VoiceSlotManager()
-    
-    try:
-        # Validate location index
-        if index >= len(data.locations):
-            raise ValueError(f"Invalid location index: {index}")
-            
-        location = data.locations[index]
-        voice_data = None
 
-        # Handle custom voice cloning
+    try:
+        # Step 1: Handle voice cloning if needed
+        voice_data = None
         if data.ad_type == 'custom':
             # First validate that the slot reservation is valid
             slot_available = await slot_manager.has_available_slot(data.slot_reservation_id)
@@ -159,9 +59,11 @@ async def process_ad(websocket: WebSocket, index: int, data: AdRequest, voices: 
             
             # Clone the voice
             async with create_speech_generator() as labs:
-                clone_res = await labs.clone_voice(
-                    data.audio_recordings, 
-                    langauge_code=data.clone_language)
+                clone_res = None
+                if recordings:
+                    clone_res = await labs.clone_voice(
+                        recordings, 
+                        langauge_code=data.clone_language)
                 if not clone_res:
                     raise Exception("Error cloning voice")
                 
@@ -173,162 +75,139 @@ async def process_ad(websocket: WebSocket, index: int, data: AdRequest, voices: 
                     data.slot_reservation_id
                 ) as acquired:
                     if not acquired:
-                        # Clean up the cloned voice if slot acquisition fails
                         try:
                             await labs.delete_voice(voice_id)
                         except Exception as cleanup_error:
-                            logger.error(f"Failed to cleanup voice after slot acquisition failure: {cleanup_error}")
+                            logger.error(
+                                f"Failed to cleanup voice after slot acquisition failure: {cleanup_error}"
+                            )
                         raise Exception("Slot acquisition failed after voice cloning")
                     
-                    # Get the voice data
                     voice_data = await labs.get_voice(voice_id)
                     if not voice_data:
                         raise Exception("Error getting cloned voice data")
                     
                     voice_data = ensure_voice_data_object(voice_data)
 
-        # Gather all required data concurrently
-        tasks = [
-            asyncio.create_task(get_insights(location.name)),
-            asyncio.create_task(get_trends(location.code)),
-            asyncio.create_task(get_forecast_info(
-                location.name, 
-                data.use_weather,
-                data.forecast_type
-            )),
-            asyncio.create_task(get_slangs(location.name))
-        ]
+        # Step 2: Gather insights
+        state.insights = await step_gather_insights(
+            websocket, state, location.name, location.code, 
+            data.use_weather, data.forecast_type
+        )
 
-        taste_data, trends, forecast_data, slangs = await asyncio.gather(*tasks)
+        if state.insights.status == StepStatus.FAILED:
+            # Send summary and return - can't continue without insights
+            return
 
-        if not taste_data:
-            raise ValueError("Taste generation failed")
+        # Step 3: Generate transcript
+        state.transcript = await step_generate_transcript(
+            websocket, state, data, voices, state.insights.data
+        )
 
-        # Generate transcript
-        async with create_gpt_client() as gpt:
-            user_prompt = transcript_prompts.user_prompt(
-                data.product_summary,
-                data.offer_summary,
-                data.cta,
-                location,
-                taste_data,
-               [voice.model_dump() for voice in voices],
-                trends,
-                slangs,
-                forecast_data,
-            )
+        if state.transcript.status == StepStatus.FAILED:
+            return
 
-            transcript_request = TranscriptRequest(
-                user_prompt=json.dumps(user_prompt),
-                with_forecast=data.use_weather,
-                forecast_days=data.forecast_type,
-                variations=1
-            )
-            
-            transcript_results = await gpt.generate_transcripts(transcript_request)
-
-        if not transcript_results or not transcript_results.results:
-            raise ValueError("Transcript generation failed")
-
-        # Prepare voice data for non-custom ads
+        # Prepare voice data
         if not voice_data:
-            voice_model = transcript_results.results[0].voice_model.lower()
+            voice_model = state.transcript.data.results[0].voice_model.lower()
             voice_dict = next(
                 (v for v in voices if v.voice_name.lower() == voice_model),
                 voices[-1] if voices else None
             )
-            
-            if not voice_dict:
-                raise ValueError("No suitable voice found")
-                
             voice_data = ensure_voice_data_object(voice_dict)
-            voice_id = voice_data.voice_id
 
-        # Generate music and speech concurrently
-        musicgen = MusicGen()
-        music_prompt = transcript_results.results[0].music_prompt
+        # Step 4 & 5: Generate speech and music concurrently
+        speech_task = asyncio.create_task(
+            step_generate_speech(websocket, state, state.transcript.data, voice_data)
+        )
+        music_task = asyncio.create_task(
+            step_generate_music(
+                websocket, state, 
+                state.transcript.data.results[0].music_prompt
+            )
+        )
 
-        tasks = [
-            asyncio.create_task(generate_ad_speech(
-                websocket,
-                index, 
-                location.name, 
-                transcript_results, 
-                voice_data
-            )),
-            asyncio.create_task(musicgen.generate_background_music(data, music_prompt, 40))
-        ]
+        # Wait for both and handle partial failures
+        speech_result, music_result = await asyncio.gather(
+            speech_task, music_task, return_exceptions=True
+        )
 
-        speech_data, music_buffer = await asyncio.gather(*tasks)
+        # Handle speech result
+        if isinstance(speech_result, Exception):
+            state.speech = StepResult(
+                StepStatus.FAILED, 
+                error=str(speech_result), 
+                step_name="speech"
+            )
+        else:
+            state.speech = speech_result
 
-        if not speech_data.get("speech_buffer"):
-            raise ValueError("Speech generation failed")
+        # Handle music result  
+        if isinstance(music_result, Exception):
+            state.music = StepResult(
+                StepStatus.FAILED,
+                error=str(music_result),
+                step_name="music"
+            )
+        else:
+            state.music = music_result
+
+        # Step 6: Merge audio only if both speech and music succeeded
+        if (state.speech.status == StepStatus.SUCCESS and 
+            state.music.status == StepStatus.SUCCESS):
             
-        if not music_buffer:
-            raise ValueError("Music generation failed")
-        
-        # Mix audio
-        async with create_audio_mixer() as mixer:
-            merged_buffer = await mixer.merge_music_with_speech(
-                speech_data["speech_buffer"],
-                music_buffer
+            state.merge = await step_merge_audio(
+                websocket, state, state.speech.data, state.music.data
+            )
+        else:
+            state.merge = StepResult(
+                StepStatus.SKIPPED,
+                error="Skipped due to speech or music failure",
+                step_name="merge"
             )
 
-        if not merged_buffer:
-            raise ValueError("Audio mixing failed")
-
-        # Prepare final response
-        merged_data = {
-            "type": "merged_audio_done",
-            "merged_buffer": merged_buffer
-        }
-
-        response_data = {**speech_data, **merged_data}
-        await websocket.send_json(response_data)
-        
-        # Clean up custom voice if successful
+        # Step 7: Voice cleanup
         if data.ad_type == 'custom' and voice_id:
-            await _cleanup_custom_voice(voice_id, slot_manager, 'completed')
-            
+            cleanup_status = 'completed' if state.merge.status == StepStatus.SUCCESS else 'error'
+            await cleanup_custom_voice(voice_id, slot_manager, cleanup_status)
+            state.voice_cleanup = StepResult(StepStatus.SUCCESS, step_name="voice_cleanup")
+
+        await safe_send_websocket_message(websocket, {
+            "type": "done",
+            "index": index
+        })
+
     except Exception as e:
-        logger.error(f"Error in [process_ad] for index {index}: {e}")
+        logger.error(f"Unexpected error in process_ad for index {index}: {e}")
         
-        # Clean up custom voice on error
+        # Clean up voice on unexpected error
         if data.ad_type == 'custom' and voice_id:
-            await _cleanup_custom_voice(voice_id, slot_manager, 'error')
-        
-        # Send error to websocket
-        error_response = {"type": "error", "index": index, "message": str(e)}
-        await websocket.send_json(error_response)
-        raise
+            await cleanup_custom_voice(voice_id, slot_manager, 'error')
+            
+        await safe_send_websocket_message(websocket, {
+            "type": "error",
+            "index": index,
+            "message": f"Unexpected error: {str(e)}"
+        })
 
-async def _cleanup_custom_voice(voice_id: str, slot_manager: VoiceSlotManager, status: str):
-    """Clean up custom voice and update slot status."""
-    try:
-        async with create_speech_generator() as labs:
-            deleted = await labs.delete_voice(voice_id)
-            if not deleted:
-                logger.warning(f"Failed to delete voice {voice_id}")
-        
-        await slot_manager.update_slot_status(voice_id, status)
-        logger.info(f"Voice {voice_id} cleaned up with status: {status}")
-        
-    except Exception as cleanup_error:
-        logger.error(f"Error during voice cleanup for {voice_id}: {cleanup_error}")
-
-@ws.websocket("/ws/generate")
+@ws.websocket("/generate")
 async def generate_audio_ads(websocket: WebSocket):
-    """Main websocket endpoint for generating audio ads."""
+    """Main websocket endpoint with granular error handling."""
+    print("Websocket activate")
     await websocket.accept()
 
     try:
-        # Receive and validate request
+        # Receive and validate initial request
         data = await websocket.receive_json()
         ad_request = AdRequest(**data)
         
-        # Validate locations
         if not ad_request.locations:
             raise ValueError("No locations provided")
+
+        # Send acknowledgment that we received the request
+        await safe_send_websocket_message(websocket, {
+            "type": "received"
+        })
 
         # Get voices library
         async with create_speech_generator() as labs:
@@ -343,39 +222,56 @@ async def generate_audio_ads(websocket: WebSocket):
             is_slot_available = await slot_manager.has_available_slot(
                 ad_request.slot_reservation_id
             )
-
             if not is_slot_available:
                 raise ValueError("Invalid reservation ID or no slots available")
         
-        # Process all locations concurrently
+        # Wait for music buffers and finished signal
+        music_buffers = []
+        while True:
+            try:
+                message = await websocket.receive()
+                
+                if message["type"] == "websocket.receive":
+                    if "bytes" in message:
+                        # This is a music buffer
+                        music_buffers.append(message["bytes"])
+                    elif "text" in message:
+                        # This is a JSON message
+                        json_data = json.loads(message["text"])
+                        if json_data.get("type") == "finished":
+                            break
+                else:
+                    break
+                    
+            except Exception as e:
+                logger.error(f"Error receiving message: {e}")
+                break
+
+        # Now process with all the data
+        # You can use music_buffers here as needed
+        
+        # Process all locations with granular handling
         tasks = [
-            asyncio.create_task(process_ad(websocket, i, ad_request, voices)) 
+            asyncio.create_task(
+                process_ad_with_granular_handling(websocket, i, ad_request, voices, music_buffers)
+            ) 
             for i in range(len(ad_request.locations))
         ]
 
-        # Wait for all tasks to complete, but don't fail if individual tasks fail
+        # Wait for all tasks, collecting results
         results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        # Check results and send individual errors if needed
-        has_success = False
-        for i, result in enumerate(results):
-            if isinstance(result, Exception):
-                logger.error(f"Task {i} failed: {result}")
-                # Error already sent by process_ad function
-            else:
-                has_success = True
-
-        if not has_success:
-            raise ValueError("All audio ad generations failed")
-
-        # Send completion signal
-        await websocket.send_json({"type": "done"})
+        
+        await safe_send_websocket_message(websocket, {
+            "type": "complete"
+        })
         
     except Exception as e:
-        logger.error(f"Error in [generate_audio_ads]: {e}")
-        await websocket.send_json({"type": "error", "message": str(e)})
+        logger.error(f"Error in generate_audio_ads: {e}")
+        await safe_send_websocket_message(websocket, {
+            "type": "fatal_error", 
+            "message": str(e)
+        })
     finally:
-        # Ensure websocket is closed properly
         try:
             await websocket.close()
         except:

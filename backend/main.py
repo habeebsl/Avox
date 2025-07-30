@@ -1,7 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from routes.clone import clone_router
+from routes.ws_audio_ads import ws
 
 app = FastAPI()
+
+app.include_router(clone_router, prefix="/api/clones")
+app.include_router(ws, prefix="/ws/ads")
 
 origins = [
     "http://localhost",

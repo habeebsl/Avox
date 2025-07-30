@@ -45,7 +45,7 @@ async def get_voice_training_sentences(language_code: str):
     try:
         sentences = random.sample(cloning_sentences, 5)
         sentence_string = "\n\n".join(sentences)
-        if language_code == "EN":
+        if language_code.lower() == "en":
             return {
                 "sentences": sentences,
                 "language": "EN"
@@ -53,7 +53,7 @@ async def get_voice_training_sentences(language_code: str):
         
         translated_str: str = await translate(
             sentence_string, 
-            "EN", 
+            "EN-US", 
             language_code.upper()
         )
         

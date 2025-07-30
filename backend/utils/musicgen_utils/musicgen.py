@@ -4,6 +4,7 @@ import time
 
 import httpx
 import replicate
+from replicate.helpers import FileOutput
 from dotenv import load_dotenv
 import tenacity
 import structlog
@@ -138,6 +139,9 @@ class MusicGen:
             
             if isinstance(output, list) and len(output) > 0:
                 output = output[0]  # Take first result if list
+            
+            if isinstance(output, FileOutput):
+                output = output.url
             
             if not isinstance(output, str):
                 raise GenerationError(f"Unexpected output type: {type(output)}")

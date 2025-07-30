@@ -121,7 +121,7 @@ Use insights strategically based on:
 
 **Technical specs:**
 - 120-180 words (15-20 seconds spoken)
-- Each sentence/beat on separate line
+- **CRITICAL: Each sentence/beat must be on its own separate line with single newlines**
 - Conversational, not scripted
 - Match voice personality perfectly
 - Incorporate trending topics and slang naturally{weather_script_requirement}
@@ -133,6 +133,21 @@ Use insights strategically based on:
 - Music genre should amplify the cultural vibe
 - Slang usage should feel authentic to the voice personality{weather_tone_requirement}
 
+## **TRANSCRIPT FORMATTING EXAMPLE:**
+
+✅ CORRECT:
+"Line 1 content here.
+Line 2 content here.
+Line 3 content here."
+
+❌ INCORRECT:
+"Line 1. Line 2. Line 3." (all on one line)
+
+❌ INCORRECT:
+"Line 1.
+
+Line 2." (double spacing)
+
 ## **VOICE & MUSIC SELECTION:**
 
 **Voice Selection Priority:**
@@ -141,6 +156,7 @@ Use insights strategically based on:
    - Italian audience → Italian-speaking voice
    - Nigerian audience → Nigerian-accented voice
    - US Southern audience → Southern US accent
+   - Japanese audience → Japanese-speaking voice
 
 2. **Close Match**: If exact match unavailable, choose the closest cultural/linguistic fit
    - Australian audience → British accent (over American)
@@ -149,8 +165,12 @@ Use insights strategically based on:
    - Caribbean audience → Voice with similar rhythm/intonation
 
 3. **Neutral Fallback**: If no cultural match exists, choose a neutral voice that won't feel foreign
-   - Avoid accents that might seem disconnected from your audience
-   - Consider voice age, energy, and personality over accent if needed
+
+**OUTPUT LANGUAGE REQUIREMENT**: 
+- **ALL OUTPUT must be in English** - transcripts, insights, music prompts, and explanations
+- This is for review purposes so English-speaking stakeholders can understand the content
+- Feel free to select any voice model (including non-English voices) - just write everything in English
+- The selected voice will adapt the English content to their natural accent/delivery style
 
 **Music Selection:**
 - Select single music genre that enhances the cultural moment you're creating
@@ -222,7 +242,10 @@ If your transcript says: "You know that feeling when you're{' hiding from this c
     ]
 }}
 
+**IMPORTANT REMINDER**: Regardless of voice selection, write ALL content (transcripts, insights, music descriptions) in English for stakeholder review and understanding.
+
 ## **QUALITY CHECKLIST:**
+- **CRITICAL: Is each sentence/beat on its own line separated by \\n?** (Required for audio production)
 - Does this sound like my target audience talking to a friend?
 - Are cultural references, trends, and slang natural and high-resonance?
 - Is the slang usage authentic and not forced?
@@ -235,7 +258,8 @@ If your transcript says: "You know that feeling when you're{' hiding from this c
 """
 
 def user_prompt(
-    company_summary: str, 
+    product_name: str,
+    product_summary: str, 
     offer_summary: str, 
     cta: str,
     location: str,
@@ -247,15 +271,16 @@ def user_prompt(
 ):
     
     data = {
-       "product_summary": company_summary,
-       "offer_summary": offer_summary,
-       "cta": cta,
-       "location": location,
-       "insights": insights,
-       "voices": voices,
-       "forecast_details": forecast_details,
-       "slangs": slangs,
-       "currrent_trends": trends
+        "product_name": product_name,
+        "product_summary": product_summary,
+        "offer_summary": offer_summary,
+        "cta": cta,
+        "location": location,
+        "insights": insights,
+        "voices": voices,
+        "forecast_details": forecast_details,
+        "slangs": slangs,
+        "currrent_trends": trends
               
     }
 
