@@ -34,6 +34,7 @@ interface AdDataState {
     updateAd: (updatedAd: AdData) => void;
     populateAds: (data: CountryData[]) => void;
     failAllPendingRequests: () => void;
+    nullifyAllPendingRequests: () => void;
 }
 
 const useAdData = create<AdDataState>((set, get) => ({
@@ -163,6 +164,19 @@ const useAdData = create<AdDataState>((set, get) => ({
             nonMusicAudioSrc: ad.nonMusicAudioSrc === "pending" ? "error" : ad.nonMusicAudioSrc,
             transcriptSents: ad.transcriptSents === "pending" ? "error" : ad.transcriptSents,
             insights: ad.insights === "pending" ? "error" : ad.insights,
+            status: ad.status === "pending" ? "done" : ad.status
+        }));
+        set({ ads: updatedAds });
+    },
+
+    nullifyAllPendingRequests: () => {
+        const { ads } = get();
+        const updatedAds = ads.map(ad => ({
+            ...ad,
+            musicAudioSrc: ad.musicAudioSrc === "pending" ? null : ad.musicAudioSrc,
+            nonMusicAudioSrc: ad.nonMusicAudioSrc === "pending" ? null : ad.nonMusicAudioSrc,
+            transcriptSents: ad.transcriptSents === "pending" ? null : ad.transcriptSents,
+            insights: ad.insights === "pending" ? null : ad.insights,
             status: ad.status === "pending" ? "done" : ad.status
         }));
         set({ ads: updatedAds });
