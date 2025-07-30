@@ -1,0 +1,26 @@
+.playButton {
+  border-radius: 50%;
+  backdrop-filter: blur(10px);
+  color: #333;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.playButton:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.playButton:active {
+  transform: scale(0.95);
+}
+
+.playButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}

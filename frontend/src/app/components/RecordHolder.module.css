@@ -1,0 +1,234 @@
+.recordHolder {
+  position: absolute;
+  top: 20px;
+  right: 0;
+  z-index: 1000;
+}
+
+.holderButton {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.holderButton:hover {
+  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.holderButton.open {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(0.95);
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.holderInner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.recordStack {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  opacity: 0.6;
+}
+
+.record {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.record:nth-child(1) {
+  transform: translateY(-2px) scale(0.9);
+  z-index: 1;
+}
+
+.record:nth-child(2) {
+  transform: translateY(0px) scale(0.95);
+  z-index: 2;
+}
+
+.record:nth-child(3) {
+  transform: translateY(2px) scale(1);
+  z-index: 3;
+}
+
+.vinylIcon {
+  position: absolute;
+  color: rgba(255, 255, 255, 0.8);
+  z-index: 10;
+  animation: slowSpin 8s linear infinite;
+}
+
+.holderButton.open .vinylIcon {
+  animation-play-state: paused;
+}
+
+.arrow {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  color: rgba(255, 255, 255, 0.6);
+  transition: transform 0.3s ease;
+  z-index: 10;
+}
+
+.arrow.rotated {
+  transform: rotate(180deg);
+}
+
+.slidingContainer {
+  position: absolute;
+  top: 70px;
+  right: 0;
+  width: 300px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+
+  visibility: hidden;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slidingContainer.visible {
+  max-height: 300px;
+  visibility: visible;
+  opacity: 1;
+}
+
+.adsContainer {
+  padding: 20px;
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slidingContainer.visible .adsContainer {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.adLabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  /* margin-bottom: 16px; */
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.adLabel span {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  font-weight: 500;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.trackCount {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.adsList {
+  display: flex;
+  flex-direction: column;
+}
+
+.backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(2px);
+  z-index: -1;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slowSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Hover effects for better interactivity */
+.holderButton::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.holderButton:hover::before {
+  opacity: 1;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .holderButton {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .slidingContainer {
+    width: 180px;
+    top: 60px; /* Changed from bottom: 60px to top: 60px */
+  }
+  
+  .vinylIcon {
+    width: 20px;
+    height: 20px;
+  }
+}
