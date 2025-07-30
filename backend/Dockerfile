@@ -17,7 +17,8 @@ RUN apt-get update -q && \
         libcups2 \
         libxkbcommon0 \
         libatspi2.0-0 \
-        libnss3 && \
+        libnss3 \
+        ffmpeg && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
