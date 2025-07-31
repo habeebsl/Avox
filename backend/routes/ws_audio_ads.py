@@ -247,15 +247,8 @@ async def generate_audio_ads(websocket: WebSocket):
                 break
 
         # Process all locations with granular handling
-        tasks = [
-            asyncio.create_task(
-                process_ad_with_granular_handling(websocket, i, ad_request, voices, music_buffers)
-            ) 
-            for i in range(len(ad_request.locations))
-        ]
-
-        # Wait for all tasks, collecting results
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for i in range(len(ad_request.locations)):
+            await process_ad_with_granular_handling(websocket, i, ad_request, voices, music_buffers)
         
         await safe_send_websocket_message(websocket, {
             "type": "complete"
