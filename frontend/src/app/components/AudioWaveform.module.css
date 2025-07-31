@@ -87,6 +87,11 @@
   background: rgba(255, 255, 255, 0.4);
 }
 
+.musicButton.musicLoading {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 .musicEnabled {
   color: #333;
 }

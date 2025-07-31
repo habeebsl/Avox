@@ -6,6 +6,7 @@ import useAudioStore from '../store/audioStore';
 import { PlayButton } from './PlayButton';
 import useAdData from '../store/adDataStore';
 import { RecordHolder } from './RecordHolder';
+import Loader from './Loader';
 
 interface SmoothSplineWaveformProps {
   width?: number;
@@ -124,7 +125,7 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
 
   const handleMusicToggle = useCallback(async () => {
     const activeAd = getActiveAd()
-    if (!audioRef.current || !hasBothVersions || !activeAd) return;
+    if (!audioRef.current || !hasBothVersions || !activeAd || activeAd.musicAudioSrc === "pending") return;
     
     const currentTimeStamp = currentTime;
     const wasPlaying = isPlaying;
@@ -324,18 +325,62 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
 
   useEffect(() => {
     if (audioRef.current && activeIndex !== null) {
-      const source = getCurrentAudioSource();
-      if (source && audioRef.current.src !== source) {
-        resetAudio();        
-        audioRef.current.src = source;
+      const preferredSource = getCurrentAudioSource();
+      const currentSrc = audioRef.current.src;
+      
+      // Only switch if we have a preferred source and it's different from current
+      if (preferredSource && currentSrc !== preferredSource) {
+        const wasPlaying = isPlaying;
+        const currentTimeStamp = currentTime;
+        
+        // Reset store state first
+        resetAudio();
+        
+        // Update audio source
+        audioRef.current.src = preferredSource;
+        
+        const handleLoadedMetadata = () => {
+          if (audioRef.current) {
+            audioRef.current.currentTime = currentTimeStamp;
+            audioRef.current.removeEventListener('loadedmetadata', handleLoadedMetadata);
+            
+            // Resume playing if it was playing before, with a small delay
+            if (wasPlaying) {
+              setTimeout(() => {
+                play();
+              }, 100);
+            }
+          }
+        };
+        
+        audioRef.current.addEventListener('loadedmetadata', handleLoadedMetadata);
         audioRef.current.load();
+        
+        // Update store with new source
+        if (switchAudioSource) {
+          switchAudioSource(preferredSource);
+        }
       }
     }
-  }, [activeIndex, getCurrentAudioSource, resetAudio]);
+  }, [
+    activeIndex, 
+    musicAudioSrc, 
+    nonMusicAudioSrc, 
+    isMusicEnabled, 
+    getCurrentAudioSource, 
+    resetAudio, 
+    isPlaying, 
+    currentTime, 
+    play, 
+    switchAudioSource]);
 
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   const getTooltipText = () => {
+    if (activeAd?.musicAudioSrc === "pending") {
+      return "Background music is loading"
+    }
+
     if (!hasBothVersions) return "Only one version available";
     return isMusicEnabled ? "Disable music" : "Enable music";
   };
@@ -363,16 +408,20 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
           <button
             onClick={handleMusicToggle}
             className={`${styles.musicButton} ${
-              !hasBothVersions 
-                ? styles.musicDisabled 
-                : isMusicEnabled 
-                  ? styles.musicEnabled 
-                  : styles.musicDisabled
+              activeAd?.musicAudioSrc === "pending"
+                ? styles.musicLoading
+                : !hasBothVersions 
+                  ? styles.musicDisabled 
+                  : isMusicEnabled 
+                    ? styles.musicEnabled 
+                    : styles.musicDisabled
             }`}
-            disabled={!hasBothVersions}
+            disabled={!hasBothVersions || activeAd?.musicAudioSrc === "pending"}
             title={getTooltipText()}
           >
-            {isMusicEnabled || hasOnlyMusic ? (
+            {activeAd?.musicAudioSrc === "pending" ? (
+              <Loader color='black' size='sm' />
+            ) : isMusicEnabled || hasOnlyMusic ? (
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
                 {!hasBothVersions && (
