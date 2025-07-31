@@ -100,7 +100,7 @@ export const AdCube: React.FC<AdCubeProps> = ({
           playButtonStyling="w-[32px] h-[32px] backdrop-blur-lg"
           svgStyling="w-[16px] h-[16px] text-white"
           theme={theme}
-          isLoading={getAdLoadingState(index)}
+          isLoading={currentAd.status === "pending"}
           loaderSize="sm"
           isError={getAdErrorState(index)}
         />
