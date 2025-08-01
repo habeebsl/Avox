@@ -15,7 +15,6 @@ export default function SpeechPage() {
 
   useEffect(() => {
     if (locations) {
-      console.log(getRequestObject())
       if (adType === "custom" && cloneRecordings.length > 0) {
         populateAds(locations)
         setActiveIndex(0)
