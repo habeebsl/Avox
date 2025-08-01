@@ -17,7 +17,7 @@ interface AdRequest {
     ad_type: Adtype;
     slot_reservation_id: string | null;
     use_weather: boolean;
-    forecast_type: ForecastType;
+    forecast_type: ForecastType | null;
     clone_language: string | null;
 }
 
@@ -96,7 +96,7 @@ export const useAdRequest = create<AdRequestState>((set, get) => ({
             clone_language: get().cloneLanguage,
             product_summary: get().productSummary,
             offer_summary: get().offerSummary,
-            forecast_type: forecastType,
+            forecast_type: forecastType === 0 ? null : forecastType,
             use_weather: forecastType === 0 ? false : true,
             locations: get().locations,
             cta: get().cta,
