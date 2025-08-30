@@ -1,4 +1,3 @@
-# Dockerfile.override
 FROM python:3.13
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -21,7 +20,7 @@ RUN apt-get update -q && \
         libnss3 \
         ffmpeg \
         fonts-unifont \
-        fonts-ubuntu \
+        fonts-dejavu \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
