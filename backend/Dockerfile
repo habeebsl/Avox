@@ -1,3 +1,4 @@
+# Dockerfile.override
 FROM python:3.13
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -18,16 +19,18 @@ RUN apt-get update -q && \
         libxkbcommon0 \
         libatspi2.0-0 \
         libnss3 \
-        ffmpeg && \
-    rm -rf /var/lib/apt/lists/*
+        ffmpeg \
+        fonts-unifont \
+        fonts-ubuntu \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY requirements.txt ./
 
+# install python deps and browsers, but DO NOT call playwright install-deps
 RUN pip3 install --no-cache-dir -r requirements.txt && \
-    playwright install chromium && \
-    playwright install-deps chromium
+    playwright install chromium
 
 COPY . .
 
