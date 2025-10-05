@@ -33,6 +33,7 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
   const smoothedDataRef = useRef<number[]>([]);
   const progressRef = useRef<HTMLDivElement>(null);
   const glassBallRef = useRef<HTMLDivElement>(null);
+  const isInitialLoadRef = useRef(true);
   
   // Local state for audio analysis and music toggle
   const [isDragging, setIsDragging] = useState(false);
@@ -319,51 +320,37 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
     }
   }, [dataArray])
 
-  // Automatically switch to music version when it becomes available
-  // but preserve playback state to avoid freezing
+  // Only auto-switch on initial load or when changing ads
+  // Don't auto-switch when music arrives - let user toggle manually
   useEffect(() => {
     if (audioRef.current && activeIndex !== null) {
       const preferredSource = getCurrentAudioSource();
       const currentSrc = audioRef.current.src;
       
-      // Switch to preferred source if it's different from current
-      if (preferredSource && currentSrc !== preferredSource) {
-        const wasPlaying = !audioRef.current.paused;
-        const currentTimeStamp = audioRef.current.currentTime;
-        
-        // Don't reset audio - just switch source
+      // Only switch automatically on initial load or when there's no source
+      const shouldAutoSwitch = isInitialLoadRef.current || !currentSrc || currentSrc === '';
+      
+      if (preferredSource && currentSrc !== preferredSource && shouldAutoSwitch) {
         audioRef.current.src = preferredSource;
-        
-        const handleCanPlay = () => {
-          if (audioRef.current) {
-            // Restore the timestamp
-            audioRef.current.currentTime = currentTimeStamp;
-            audioRef.current.removeEventListener('canplay', handleCanPlay);
-            
-            // Resume playing if it was playing before
-            if (wasPlaying) {
-              play();
-            }
-          }
-        };
-        
-        audioRef.current.addEventListener('canplay', handleCanPlay);
         audioRef.current.load();
         
         if (switchAudioSource) {
           switchAudioSource(preferredSource);
         }
+        
+        isInitialLoadRef.current = false;
       }
     }
   }, [
     activeIndex, 
-    musicAudioSrc, 
-    nonMusicAudioSrc, 
-    isMusicEnabled, 
     getCurrentAudioSource, 
-    play, 
     switchAudioSource
   ]);
+  
+  // Reset initial load flag when switching ads
+  useEffect(() => {
+    isInitialLoadRef.current = true;
+  }, [activeIndex]);
 
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
 
