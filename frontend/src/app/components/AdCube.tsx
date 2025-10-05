@@ -22,10 +22,11 @@ export const AdCube: React.FC<AdCubeProps> = ({
     getActiveAd,
     ads,
     getAdLoadingState,
-    getAdErrorState
+    getAdErrorState,
+    activeIndex
   } = useAdData()
 
-  const { isPlaying, pause } = useAudioStore()
+  const { isPlaying, pause, play } = useAudioStore()
   const { setActiveTrack, handleTrackUpdate } = useNotificationStore()
   
   const currentAd = ads[index];
@@ -56,25 +57,42 @@ export const AdCube: React.FC<AdCubeProps> = ({
     }
   }, [currentAd?.musicAudioSrc, currentAd?.nonMusicAudioSrc, index, handleTrackUpdate]);
      
-  const handleClick = async () => {
-    setActiveTrack(index) // Set as active track for notifications
-  
-    const currentAd = getActiveAd()
-    if (currentAd?.index === index && isPlaying) {
-      return
-    }
-    
-    if (currentAd?.index !== index && isPlaying) {
-      pause()
-    }
-    
+  // Handler for clicking the container (just switch view, don't affect playback)
+  const handleContainerClick = async () => {
+    setActiveTrack(index)
     setActiveIndex(index)
   }
 
+  // Handler for clicking the play button (control playback)
+  const handlePlayButtonClick = async (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent container click from firing
+    
+    setActiveTrack(index)
+    
+    if (activeIndex !== index) {
+      // Switching to a different track
+      if (isPlaying) {
+        pause() // Pause current track
+      }
+      setActiveIndex(index) // Switch to new track
+      
+      // Give time for audio source to update, then play
+      setTimeout(() => {
+        play()
+      }, 150)
+    } else {
+      // Same track - just toggle play/pause
+      if (isPlaying) {
+        pause()
+      } else {
+        play()
+      }
+    }
+  }
+
   const isAdCurrentlyPlaying = useMemo(() => {
-    const ad = getActiveAd()
-    return ad?.index === index && isPlaying
-  }, [getActiveAd, index, isPlaying])
+    return activeIndex === index && isPlaying
+  }, [activeIndex, index, isPlaying])
 
   // Rest of your component remains the same...
   const LocationIcon = () => (
@@ -85,7 +103,7 @@ export const AdCube: React.FC<AdCubeProps> = ({
 
   return (
     <div 
-      onClick={handleClick} 
+      onClick={handleContainerClick} 
       className="relative flex items-center justify-between p-4 backdrop-blur-20 border-b border-white/10 transition-all duration-300 hover:bg-white/10 group cursor-pointer"
       style={{
         borderBottomColor: 'rgba(255, 255, 255, 0.1)',
@@ -94,16 +112,18 @@ export const AdCube: React.FC<AdCubeProps> = ({
     >
       {/* Content container */}
       <div className="flex items-center gap-3 flex-1">
-        <PlayButton 
-          isDisabled={!hasAdWithAudio(index)}
-          isPlaying={isAdCurrentlyPlaying}
-          playButtonStyling="w-[32px] h-[32px] backdrop-blur-lg"
-          svgStyling="w-[16px] h-[16px] text-white"
-          theme={theme}
-          isLoading={currentAd.status === "pending"}
-          loaderSize="sm"
-          isError={getAdErrorState(index)}
-        />
+        <div onClick={handlePlayButtonClick}>
+          <PlayButton 
+            isDisabled={!hasAdWithAudio(index)}
+            isPlaying={isAdCurrentlyPlaying}
+            playButtonStyling="w-[32px] h-[32px] backdrop-blur-lg"
+            svgStyling="w-[16px] h-[16px] text-white"
+            theme={theme}
+            isLoading={currentAd.status === "pending"}
+            loaderSize="sm"
+            isError={getAdErrorState(index)}
+          />
+        </div>
         <div className="flex flex-col gap-1 flex-1">
           <div className="flex justify-between items-center gap-2">
             <span className="text-white/80 font-medium text-sm">

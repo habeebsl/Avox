@@ -102,17 +102,30 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
       const cleanup = registerAudio(audioRef.current);
       return cleanup;
     }
-  }, [registerAudio, activeIndex]);
+  }, [registerAudio]); // ← Removed activeIndex dependency!
 
-  // Initialize with appropriate version
+  // Add a separate effect to handle track switching without re-registering
   useEffect(() => {
-    if (audioRef.current) {
-      const source = getCurrentAudioSource();
-      if (source) {
-        audioRef.current.src = source;
+    if (!audioRef.current) return;
+    
+    const source = getCurrentAudioSource();
+    
+    // Only update source if it's valid and different
+    if (source && 
+        source !== "pending" && 
+        source !== "error" && 
+        audioRef.current.src !== source) {
+      
+      // Pause if playing
+      if (isPlaying) {
+        pause();
       }
+      
+      // Update source
+      audioRef.current.src = source;
+      audioRef.current.load();
     }
-  }, [getCurrentAudioSource]);
+  }, [activeIndex, getCurrentAudioSource, isPlaying, pause]);
 
   // Set initial music state based on available versions
   useEffect(() => {
@@ -181,7 +194,7 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    analyser.getByteTimeDomainData(dataArray);
+    analyser.getByteTimeDomainData(dataArray as any);
     
     const smoothed = smoothedDataRef.current;
     let totalVolume = 0;
