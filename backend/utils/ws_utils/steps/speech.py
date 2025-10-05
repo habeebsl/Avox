@@ -72,9 +72,9 @@ async def generate_ad_speech(
             "alignments": sentence_alignment
         }
 
-        message_bytes = get_message_bytes(response_data, audio_buffer.getvalue())
+        # message_bytes = get_message_bytes(response_data, audio_buffer.getvalue())
 
-        await websocket.send_bytes(message_bytes)
+        # await websocket.send_bytes(message_bytes)
         return audio_buffer
         
     except Exception as e:

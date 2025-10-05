@@ -127,6 +127,28 @@ Use insights strategically based on:
 - Incorporate trending topics and slang naturally{weather_script_requirement}
 - Avoid fabricated references
 
+**Audio Tags (ElevenLabs v3) - USE SPARINGLY:**
+You can use audio tags to enhance emotional delivery, but **only when truly needed**. Don't over-tag.
+- Format: [tag] inline with text
+- Use 2-4 tags maximum per script (if any)
+- Only tag when it significantly enhances the moment
+
+**When to use tags:**
+✅ Key emotional moments: [excited], [whispers], [sighs]
+✅ Important emphasis: [pause], [dramatic tone]
+✅ Natural reactions: [laughs], [clears throat]
+
+**When NOT to use tags:**
+❌ Don't tag every sentence
+❌ Don't use tags for normal speech delivery
+❌ Don't combine more than 2 tags at once
+
+**Tag examples:**
+"[whispers] You know that feeling..." (creates intimacy)
+"[excited] Wait, what if..." (builds energy)
+"[pause] So here's the deal." (adds emphasis)
+"[laughs] Yeah, I've been there too." (adds warmth)
+
 **Tone matching:**
 - Voice + Music + Script must feel cohesive
 - Consider: energetic/chill, young/mature, local/global
@@ -140,6 +162,11 @@ Use insights strategically based on:
 Line 2 content here.
 Line 3 content here."
 
+✅ CORRECT (with optional audio tags - use sparingly):
+"[excited] Line 1 content here.
+Line 2 content here.
+[pause] Line 3 content here."
+
 ❌ INCORRECT:
 "Line 1. Line 2. Line 3." (all on one line)
 
@@ -147,6 +174,9 @@ Line 3 content here."
 "Line 1.
 
 Line 2." (double spacing)
+
+❌ INCORRECT:
+"[excited][happy][loud] Line 1." (over-tagging)
 
 ## **VOICE & MUSIC SELECTION:**
 
@@ -255,6 +285,8 @@ If your transcript says: "You know that feeling when you're{' hiding from this c
 - Would someone actually stop scrolling to listen to this?
 - Can I clearly justify why each cultural insight, trend, or slang was included?
 - Do the insights feel naturally integrated rather than artificially inserted?
+- **If using audio tags: Are they sparse (2-4 max) and truly enhancing key moments?**
+- **Audio tags should feel invisible - listeners shouldn't "notice" the tagging**
 """
 
 def user_prompt(

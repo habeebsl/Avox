@@ -1,6 +1,6 @@
 import logging
 from fastapi import WebSocket
-from utils.musicgen_utils.musicgen import MusicGen
+from utils.speech_generator_utils.speech_generator import SpeechGenerator
 from utils.ws_utils.dataclasses import StepResult, StepStatus, AdProcessingState
 from utils.ws_utils.ws_helpers import safe_send_websocket_message
 
@@ -14,8 +14,9 @@ async def step_generate_music(
 ) -> StepResult:
     """Step 4: Generate music."""
     try:
-        musicgen = MusicGen()
-        music_buffer = await musicgen.generate_background_music(music_prompt, 40)
+        music_generater = SpeechGenerator()
+
+        music_buffer = await music_generater.generate_music(music_prompt, 40)
 
         if not music_buffer:
             return StepResult(

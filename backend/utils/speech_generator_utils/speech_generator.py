@@ -5,7 +5,7 @@ import os
 import uuid
 import time
 from contextlib import asynccontextmanager
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Literal, Optional, Any, Union
 import sys
 
 from dotenv import load_dotenv
@@ -387,6 +387,84 @@ class SpeechGenerator:
             
             self._handle_elevenlabs_error(e, "get_forced_alignment")
             return None
+
+    async def generate_music(self, prompt: str, duration: int | float, request_id: Optional[str] = None):
+        """Generate music with enhanced error handling"""
+        start_time = time.time()
+        self.metrics.total_generations += 1
+        
+        try:
+            # Convert Duration to milliseconds
+            duration_ms = int(duration * 1000)
+
+            # Add instrumental specification to prompt
+            instrumental_prompt = f"{prompt}. Instrumental only, no singing or vocals, pure background music without any human voice."
+
+            logger.info("Generating music",
+                       original_prompt=prompt,
+                       enhanced_prompt=instrumental_prompt,
+                       duration_seconds=duration,
+                       duration_ms=duration_ms,
+                       request_id=request_id)
+
+            client: AsyncElevenLabs = self._get_client()
+            music_stream = client.music.compose(
+                prompt=instrumental_prompt,
+                music_length_ms=duration_ms
+            )
+
+            audio_chunks = []
+            chunk_count = 0
+            
+            async for chunk in music_stream:
+                audio_chunks.append(chunk)
+                chunk_count += 1
+                    
+                if chunk_count > 10000:
+                    logger.warning("Too many audio chunks, possible streaming issue")
+                    break
+            
+            if not audio_chunks:
+                logger.error("No audio data received", request_id=request_id)
+                self.metrics.failed_generations += 1
+                return None
+            
+            audio_bytes = b"".join(audio_chunks)
+            
+            if len(audio_bytes) == 0:
+                logger.error("Empty audio data", request_id=request_id)
+                self.metrics.failed_generations += 1
+                return None
+            
+            audio_io = io.BytesIO(audio_bytes)
+            audio_io.seek(0)
+            
+            generation_time = time.time() - start_time
+            self.metrics.successful_generations += 1
+            self.metrics.total_generation_time += generation_time
+            
+            logger.info("Music generation successful",
+                       audio_size_bytes=len(audio_bytes),
+                       generation_time=generation_time,
+                       chunks=len(audio_chunks),
+                       request_id=request_id)
+            
+            return audio_io
+            
+        except Exception as e:
+            self.metrics.failed_generations += 1
+            generation_time = time.time() - start_time
+            
+            logger.error("Music generation failed",
+                        error=str(e),
+                        error_type=type(e).__name__,
+                        generation_time=generation_time,
+                        request_id=request_id,
+                        exc_info=True)
+            
+            self._handle_elevenlabs_error(e, "generate_music")
+            return None
+
 
     async def clone_voice(
         self, 
