@@ -172,7 +172,7 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    analyser.getByteTimeDomainData(dataArray);
+    analyser.getByteTimeDomainData(dataArray as any);
     
     const smoothed = smoothedDataRef.current;
     let totalVolume = 0;
