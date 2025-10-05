@@ -109,23 +109,6 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
     }
   }, [registerAudio, activeIndex]);
 
-  // Initialize with appropriate version
-  useEffect(() => {
-    console.log('🎵 [AudioWaveform] Initialize audio source useEffect triggered', {
-      hasAudioRef: !!audioRef.current,
-      currentSource: getCurrentAudioSource(),
-      activeIndex
-    });
-    
-    if (audioRef.current) {
-      const source = getCurrentAudioSource();
-      if (source) {
-        console.log('🎵 [AudioWaveform] Setting initial audio source:', source);
-        audioRef.current.src = source;
-      }
-    }
-  }, [getCurrentAudioSource]);
-
   // Set initial music state based on available versions
   useEffect(() => {
     if (hasOnlyNonMusic) {
