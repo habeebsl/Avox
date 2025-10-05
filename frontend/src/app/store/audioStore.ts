@@ -25,6 +25,7 @@ interface AudioState {
   
   registerAudio: (audioElement: HTMLAudioElement) => (() => void);
   initializeAudio: () => Promise<{ dataArray: Uint8Array; analyser: AnalyserNode } | null>;
+  reinitializeAudio: () => Promise<{ dataArray: Uint8Array; analyser: AnalyserNode } | null>;
   seekTo: (time: number) => void;
   play: () => Promise<void>;
   pause: () => void;
@@ -129,6 +130,56 @@ const useAudioStore = create<AudioState>((set, get) => ({
       return { dataArray, analyser: analyserNode };
     } catch (error) {
       console.error('Audio initialization failed:', error);
+      return null;
+    }
+  },
+
+  reinitializeAudio: async () => {
+    const { audioElement, audioContext } = get();
+    
+    if (!audioElement) {
+      return null;
+    }
+
+    try {
+      // Close old AudioContext if it exists
+      if (audioContext) {
+        await audioContext.close();
+      }
+      
+      // Reset initialization state
+      set({
+        audioContext: null,
+        analyser: null,
+        isInitialized: false,
+        dataArray: null
+      });
+
+      // Create new AudioContext and reconnect
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const analyserNode = ctx.createAnalyser();
+      
+      analyserNode.fftSize = 512;
+      analyserNode.smoothingTimeConstant = 0.7;
+      
+      const bufferLength = analyserNode.fftSize;
+      const dataArray = new Uint8Array(bufferLength);
+      
+      // Create new MediaElementSource with current audio element
+      const source = ctx.createMediaElementSource(audioElement);
+      source.connect(analyserNode);
+      analyserNode.connect(ctx.destination);
+      
+      set({
+        audioContext: ctx,
+        analyser: analyserNode,
+        isInitialized: true,
+        dataArray: dataArray
+      });
+
+      return { dataArray, analyser: analyserNode };
+    } catch (error) {
+      console.error('Audio reinitialization failed:', error);
       return null;
     }
   },

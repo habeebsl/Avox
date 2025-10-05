@@ -33,7 +33,6 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
   const smoothedDataRef = useRef<number[]>([]);
   const progressRef = useRef<HTMLDivElement>(null);
   const glassBallRef = useRef<HTMLDivElement>(null);
-  const isInitialLoadRef = useRef(true);
   
   // Local state for audio analysis and music toggle
   const [isDragging, setIsDragging] = useState(false);
@@ -94,7 +93,8 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
     pause,
     switchAudioSource,
     dataArray,
-    resetAudio
+    resetAudio,
+    reinitializeAudio
   } = useAudioStore();
 
   // Register audio element with store
@@ -104,6 +104,16 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
       return cleanup;
     }
   }, [registerAudio, activeIndex]);
+
+  // Initialize with appropriate version
+  useEffect(() => {
+    if (audioRef.current) {
+      const source = getCurrentAudioSource();
+      if (source) {
+        audioRef.current.src = source;
+      }
+    }
+  }, [getCurrentAudioSource]);
 
   // Set initial music state based on available versions
   useEffect(() => {
@@ -128,7 +138,7 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
     const newIsMusicEnabled = !isMusicEnabled;
     setIsMusicEnabled(newIsMusicEnabled);
     
-    setTimeout(() => {
+    setTimeout(async () => {
       const newSource = newIsMusicEnabled ? activeAd.musicAudioSrc : activeAd.nonMusicAudioSrc;
       
       if (newSource && typeof newSource === 'string' && audioRef.current) {
@@ -136,10 +146,15 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
         
         audioRef.current.src = newSource;
         
-        const handleLoadedMetadata = () => {
+        const handleLoadedMetadata = async () => {
           if (audioRef.current) {
-            audioRef.current.currentTime = currentTimeStamp;
             audioRef.current.removeEventListener('loadedmetadata', handleLoadedMetadata);
+            audioRef.current.currentTime = currentTimeStamp;
+            
+            // Reinitialize AudioContext with new source
+            if (isInitialized) {
+              await reinitializeAudio();
+            }
             
             if (wasPlaying) {
               setTimeout(() => play(), 100);
@@ -162,7 +177,9 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
     resetAudio,
     switchAudioSource, 
     hasBothVersions,
-    getActiveAd
+    getActiveAd,
+    isInitialized,
+    reinitializeAudio
   ]);
 
   const drawWaveformPath2D = useCallback(() => {
@@ -172,7 +189,7 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    analyser.getByteTimeDomainData(dataArray as any);
+    analyser.getByteTimeDomainData(dataArray);
     
     const smoothed = smoothedDataRef.current;
     let totalVolume = 0;
@@ -310,46 +327,74 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
     }
   }, [dataArray])
 
-  // Only auto-switch on initial load or when changing ads
-  // Don't auto-switch when music arrives - let user toggle manually
   useEffect(() => {
-    if (audioRef.current && activeIndex !== null && isInitialLoadRef.current) {
-      // Get the active ad's audio sources at this moment
-      const activeAd = getActiveAd();
-      if (!activeAd) return;
+    const handleSourceChange = async () => {
+      if (!audioRef.current || activeIndex === null) return;
+
+      const preferredSource = getCurrentAudioSource();
+      const currentSrc = audioRef.current.src;
       
-      const isValidSource = (src: any): src is string => 
-        typeof src === 'string' && src !== 'pending' && src !== 'error';
-      
-      // Start with non-music version if available (speech will load faster)
-      let preferredSource: string | undefined;
-      if (isValidSource(activeAd.nonMusicAudioSrc)) {
-        preferredSource = activeAd.nonMusicAudioSrc;
-      } else if (isValidSource(activeAd.musicAudioSrc)) {
-        preferredSource = activeAd.musicAudioSrc;
-      }
-      
-      if (preferredSource) {
+      if (preferredSource && currentSrc !== preferredSource) {
+        const wasPlaying = !audioRef.current.paused;
+        const currentTimeStamp = audioRef.current.currentTime;
+        
+        // Pause the audio before switching
+        if (wasPlaying) {
+          pause();
+        }
+
+        // Reset audio state
+        resetAudio();
+
+        // Change the source
         audioRef.current.src = preferredSource;
+        
+        const handleLoadedMetadata = async () => {
+          if (!audioRef.current) return;
+          
+          // Remove the listener to prevent memory leaks
+          audioRef.current.removeEventListener('loadedmetadata', handleLoadedMetadata);
+          
+          // Restore the timestamp
+          audioRef.current.currentTime = currentTimeStamp;
+          
+          // Reinitialize AudioContext with new source
+          if (isInitialized) {
+            await reinitializeAudio();
+          }
+          
+          // Resume playback if it was playing before
+          if (wasPlaying) {
+            setTimeout(() => {
+              play();
+            }, 100);
+          }
+        };
+        
+        audioRef.current.addEventListener('loadedmetadata', handleLoadedMetadata);
         audioRef.current.load();
         
+        // Update the source tracking in store
         if (switchAudioSource) {
           switchAudioSource(preferredSource);
         }
-        
-        isInitialLoadRef.current = false;
       }
-    }
+    };
+
+    handleSourceChange();
   }, [
-    activeIndex,  // Only re-run when switching ads
-    getActiveAd,
-    switchAudioSource
+    activeIndex, 
+    musicAudioSrc, 
+    nonMusicAudioSrc, 
+    isMusicEnabled, 
+    getCurrentAudioSource, 
+    resetAudio, 
+    play,
+    pause,
+    switchAudioSource,
+    isInitialized,
+    reinitializeAudio
   ]);
-  
-  // Reset initial load flag when switching ads
-  useEffect(() => {
-    isInitialLoadRef.current = true;
-  }, [activeIndex]);
 
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
 
@@ -446,6 +491,7 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
       
       <audio
         ref={audioRef}
+        src={getCurrentAudioSource()}
         preload="metadata"
       />
       <RecordHolder />
