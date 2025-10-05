@@ -124,8 +124,14 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
       // Update source
       audioRef.current.src = source;
       audioRef.current.load();
+      
+      // Reset to beginning
+      audioRef.current.currentTime = 0;
+      
+      // Reset audio store state
+      resetAudio();
     }
-  }, [activeIndex, getCurrentAudioSource, isPlaying, pause]);
+  }, [activeIndex, getCurrentAudioSource, isPlaying, pause, resetAudio]);
 
   // Set initial music state based on available versions
   useEffect(() => {

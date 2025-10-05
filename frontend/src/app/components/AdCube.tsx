@@ -57,8 +57,17 @@ export const AdCube: React.FC<AdCubeProps> = ({
     }
   }, [currentAd?.musicAudioSrc, currentAd?.nonMusicAudioSrc, index, handleTrackUpdate]);
      
-  // Handler for clicking the container (just switch view, don't affect playback)
-  const handleContainerClick = async () => {
+  // Handler for clicking the container (just switch view, stop playback)
+  const handleContainerClick = async (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent bubbling
+    
+    // If we're switching to a new track while something is playing
+    if (activeIndex !== index && isPlaying) {
+      // Pause any playing audio first
+      pause()
+    }
+    
+    // Switch to the new track (UI only)
     setActiveTrack(index)
     setActiveIndex(index)
   }
