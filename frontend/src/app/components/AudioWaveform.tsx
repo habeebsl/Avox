@@ -319,33 +319,35 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
     }
   }, [dataArray])
 
+  // Automatically switch to music version when it becomes available
+  // but preserve playback state to avoid freezing
   useEffect(() => {
     if (audioRef.current && activeIndex !== null) {
       const preferredSource = getCurrentAudioSource();
       const currentSrc = audioRef.current.src;
       
+      // Switch to preferred source if it's different from current
       if (preferredSource && currentSrc !== preferredSource) {
-        const wasPlaying = audioRef.current && !audioRef.current.paused;
-        const currentTimeStamp = audioRef.current ? audioRef.current.currentTime : 0;
+        const wasPlaying = !audioRef.current.paused;
+        const currentTimeStamp = audioRef.current.currentTime;
         
-        resetAudio();
-
+        // Don't reset audio - just switch source
         audioRef.current.src = preferredSource;
         
-        const handleLoadedMetadata = () => {
+        const handleCanPlay = () => {
           if (audioRef.current) {
+            // Restore the timestamp
             audioRef.current.currentTime = currentTimeStamp;
-            audioRef.current.removeEventListener('loadedmetadata', handleLoadedMetadata);
+            audioRef.current.removeEventListener('canplay', handleCanPlay);
             
+            // Resume playing if it was playing before
             if (wasPlaying) {
-              setTimeout(() => {
-                play();
-              }, 100);
+              play();
             }
           }
         };
         
-        audioRef.current.addEventListener('loadedmetadata', handleLoadedMetadata);
+        audioRef.current.addEventListener('canplay', handleCanPlay);
         audioRef.current.load();
         
         if (switchAudioSource) {
@@ -359,7 +361,6 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
     nonMusicAudioSrc, 
     isMusicEnabled, 
     getCurrentAudioSource, 
-    resetAudio, 
     play, 
     switchAudioSource
   ]);
