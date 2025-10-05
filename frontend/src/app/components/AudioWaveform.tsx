@@ -105,16 +105,6 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
     }
   }, [registerAudio, activeIndex]);
 
-  // Initialize with appropriate version
-  useEffect(() => {
-    if (audioRef.current) {
-      const source = getCurrentAudioSource();
-      if (source) {
-        audioRef.current.src = source;
-      }
-    }
-  }, [getCurrentAudioSource]);
-
   // Set initial music state based on available versions
   useEffect(() => {
     if (hasOnlyNonMusic) {
@@ -323,14 +313,23 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
   // Only auto-switch on initial load or when changing ads
   // Don't auto-switch when music arrives - let user toggle manually
   useEffect(() => {
-    if (audioRef.current && activeIndex !== null) {
-      const preferredSource = getCurrentAudioSource();
-      const currentSrc = audioRef.current.src;
+    if (audioRef.current && activeIndex !== null && isInitialLoadRef.current) {
+      // Get the active ad's audio sources at this moment
+      const activeAd = getActiveAd();
+      if (!activeAd) return;
       
-      // Only switch automatically on initial load or when there's no source
-      const shouldAutoSwitch = isInitialLoadRef.current || !currentSrc || currentSrc === '';
+      const isValidSource = (src: any): src is string => 
+        typeof src === 'string' && src !== 'pending' && src !== 'error';
       
-      if (preferredSource && currentSrc !== preferredSource && shouldAutoSwitch) {
+      // Start with non-music version if available (speech will load faster)
+      let preferredSource: string | undefined;
+      if (isValidSource(activeAd.nonMusicAudioSrc)) {
+        preferredSource = activeAd.nonMusicAudioSrc;
+      } else if (isValidSource(activeAd.musicAudioSrc)) {
+        preferredSource = activeAd.musicAudioSrc;
+      }
+      
+      if (preferredSource) {
         audioRef.current.src = preferredSource;
         audioRef.current.load();
         
@@ -342,8 +341,8 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
       }
     }
   }, [
-    activeIndex, 
-    getCurrentAudioSource, 
+    activeIndex,  // Only re-run when switching ads
+    getActiveAd,
     switchAudioSource
   ]);
   
