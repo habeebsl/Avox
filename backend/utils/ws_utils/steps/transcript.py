@@ -31,7 +31,7 @@ async def step_generate_transcript(
                 data.offer_summary,
                 data.cta,
                 data.locations[state.index].model_dump(),
-                insights_data["taste_data"],
+                insights_data.get("taste_data", {}),
                 [voice.model_dump() for voice in voices],
                 insights_data["trends"],
                 insights_data["slangs"],
