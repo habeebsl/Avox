@@ -446,7 +446,6 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
       
       <audio
         ref={audioRef}
-        src={getCurrentAudioSource()}
         preload="metadata"
       />
       <RecordHolder />
