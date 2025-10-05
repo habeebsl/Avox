@@ -109,15 +109,6 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
     }
   }, [registerAudio, activeIndex]);
 
-  // Set initial music state based on available versions
-  useEffect(() => {
-    if (hasOnlyNonMusic) {
-      setIsMusicEnabled(false);
-    } else {
-      setIsMusicEnabled(true);
-    }
-  }, [hasOnlyNonMusic]);
-
   const handleMusicToggle = useCallback(async () => {
     console.log('🎵 [AudioWaveform] handleMusicToggle called', {
       hasBothVersions,
