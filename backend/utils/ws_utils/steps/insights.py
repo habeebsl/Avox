@@ -30,15 +30,12 @@ async def step_gather_insights(
 
         taste_data, trends, forecast_data, slangs = await asyncio.gather(*tasks)
 
+        # Make taste_data optional - log warning but continue processing
         if not taste_data:
-            return StepResult(
-                status=StepStatus.FAILED,
-                error="Taste generation failed",
-                step_name="insights"
-            )
+            logger.warning(f"Taste data unavailable for {location_name}, continuing without insights")
 
         insights_data = {
-            "taste_data": taste_data,
+            "taste_data": taste_data or {},  # Use empty dict if None
             "trends": trends,
             "forecast_data": forecast_data,
             "slangs": slangs
