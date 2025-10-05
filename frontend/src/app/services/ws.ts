@@ -148,6 +148,12 @@ export const wsService = {
                     case "speech":
                         if (targetAd) {
                             const speechData = SpeechResponsePayload.parse(metadata);
+                            console.log('🎤 [WebSocket] Received speech audio', {
+                                index: metadata.index,
+                                audioUrl,
+                                previousNonMusicSrc: targetAd.nonMusicAudioSrc
+                            });
+                            
                             targetAd.nonMusicAudioSrc = audioUrl;
                             targetAd.transcriptSents = speechData.alignments;
                             
@@ -163,6 +169,13 @@ export const wsService = {
                     case "merged":
                         if (targetAd) {
                             MergedAdPayload.parse(metadata);
+                            console.log('🎵 [WebSocket] Received merged (music) audio', {
+                                index: metadata.index,
+                                audioUrl,
+                                previousMusicSrc: targetAd.musicAudioSrc,
+                                currentNonMusicSrc: targetAd.nonMusicAudioSrc
+                            });
+                            
                             targetAd.musicAudioSrc = audioUrl;
                         }
                         break;

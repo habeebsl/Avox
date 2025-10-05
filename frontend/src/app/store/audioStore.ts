@@ -25,7 +25,6 @@ interface AudioState {
   
   registerAudio: (audioElement: HTMLAudioElement) => (() => void);
   initializeAudio: () => Promise<{ dataArray: Uint8Array; analyser: AnalyserNode } | null>;
-  reinitializeAudio: () => Promise<{ dataArray: Uint8Array; analyser: AnalyserNode } | null>;
   seekTo: (time: number) => void;
   play: () => Promise<void>;
   pause: () => void;
@@ -134,56 +133,6 @@ const useAudioStore = create<AudioState>((set, get) => ({
     }
   },
 
-  reinitializeAudio: async () => {
-    const { audioElement, audioContext } = get();
-    
-    if (!audioElement) {
-      return null;
-    }
-
-    try {
-      // Close old AudioContext if it exists
-      if (audioContext) {
-        await audioContext.close();
-      }
-      
-      // Reset initialization state
-      set({
-        audioContext: null,
-        analyser: null,
-        isInitialized: false,
-        dataArray: null
-      });
-
-      // Create new AudioContext and reconnect
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const analyserNode = ctx.createAnalyser();
-      
-      analyserNode.fftSize = 512;
-      analyserNode.smoothingTimeConstant = 0.7;
-      
-      const bufferLength = analyserNode.fftSize;
-      const dataArray = new Uint8Array(bufferLength);
-      
-      // Create new MediaElementSource with current audio element
-      const source = ctx.createMediaElementSource(audioElement);
-      source.connect(analyserNode);
-      analyserNode.connect(ctx.destination);
-      
-      set({
-        audioContext: ctx,
-        analyser: analyserNode,
-        isInitialized: true,
-        dataArray: dataArray
-      });
-
-      return { dataArray, analyser: analyserNode };
-    } catch (error) {
-      console.error('Audio reinitialization failed:', error);
-      return null;
-    }
-  },
-
   seekTo: (time) => {
     const { audioElement } = get();
     if (audioElement) {
@@ -192,24 +141,46 @@ const useAudioStore = create<AudioState>((set, get) => ({
   },
 
   play: async () => {
-    const { audioElement, audioContext } = get();
-    if (!audioElement) return;
+    const { audioElement, audioContext, isPlaying } = get();
+    console.log('▶️ [audioStore] play() called', {
+      hasAudioElement: !!audioElement,
+      audioContextState: audioContext?.state,
+      currentIsPlaying: isPlaying,
+      audioSrc: audioElement?.src,
+      audioPaused: audioElement?.paused,
+      audioReadyState: audioElement?.readyState
+    });
+    
+    if (!audioElement) {
+      console.warn('⚠️ [audioStore] Cannot play - no audio element');
+      return;
+    }
 
     if (audioContext?.state === 'suspended') {
+      console.log('🔊 [audioStore] Resuming suspended audio context');
       await audioContext.resume();
     }
 
     try {
+      console.log('▶️ [audioStore] Calling audioElement.play()');
       await audioElement.play();
+      console.log('✅ [audioStore] audioElement.play() succeeded');
     } catch (error) {
-      console.error('Play failed:', error);
+      console.error('❌ [audioStore] Play failed:', error);
     }
   },
 
   pause: () => {
     const { audioElement } = get();
+    console.log('⏸️ [audioStore] pause() called', {
+      hasAudioElement: !!audioElement,
+      audioPaused: audioElement?.paused,
+      currentTime: audioElement?.currentTime
+    });
+    
     if (audioElement) {
       audioElement.pause();
+      console.log('✅ [audioStore] audioElement.pause() executed');
     }
   },
 
@@ -238,10 +209,18 @@ const useAudioStore = create<AudioState>((set, get) => ({
   },
 
   resetAudio: () => {
-    const { audioElement } = get();
+    const { audioElement, isPlaying } = get();
+    console.log('🔄 [audioStore] resetAudio() called', {
+      hasAudioElement: !!audioElement,
+      currentIsPlaying: isPlaying,
+      currentTime: audioElement?.currentTime,
+      audioPaused: audioElement?.paused
+    });
+    
     if (audioElement) {
       audioElement.pause();
       audioElement.currentTime = 0;
+      console.log('✅ [audioStore] Audio reset - paused and seeked to 0');
     }
     
     set({
@@ -250,6 +229,8 @@ const useAudioStore = create<AudioState>((set, get) => ({
       isLoading: true,
       duration: 0,
     });
+    
+    console.log('✅ [audioStore] Store state reset');
   },
 }));
 

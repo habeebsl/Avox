@@ -134,6 +134,18 @@ const useAdData = create<AdDataState>((set, get) => ({
 
     updateAd: (updatedAd: AdData) => {
         const { ads } = get();
+        const oldAd = ads.find(ad => ad.index === updatedAd.index);
+        
+        console.log('📝 [adDataStore] updateAd called', {
+            index: updatedAd.index,
+            oldMusicSrc: oldAd?.musicAudioSrc,
+            newMusicSrc: updatedAd.musicAudioSrc,
+            oldNonMusicSrc: oldAd?.nonMusicAudioSrc,
+            newNonMusicSrc: updatedAd.nonMusicAudioSrc,
+            musicChanged: oldAd?.musicAudioSrc !== updatedAd.musicAudioSrc,
+            nonMusicChanged: oldAd?.nonMusicAudioSrc !== updatedAd.nonMusicAudioSrc
+        });
+        
         const updatedAds = ads.map(ad => 
             ad.index === updatedAd.index ? updatedAd : ad
         );

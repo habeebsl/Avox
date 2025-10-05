@@ -93,12 +93,16 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
     pause,
     switchAudioSource,
     dataArray,
-    resetAudio,
-    reinitializeAudio
+    resetAudio
   } = useAudioStore();
 
   // Register audio element with store
   useEffect(() => {
+    console.log('🎵 [AudioWaveform] registerAudio useEffect triggered', {
+      hasAudioRef: !!audioRef.current,
+      activeIndex
+    });
+    
     if (audioRef.current) {
       const cleanup = registerAudio(audioRef.current);
       return cleanup;
@@ -107,9 +111,16 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
 
   // Initialize with appropriate version
   useEffect(() => {
+    console.log('🎵 [AudioWaveform] Initialize audio source useEffect triggered', {
+      hasAudioRef: !!audioRef.current,
+      currentSource: getCurrentAudioSource(),
+      activeIndex
+    });
+    
     if (audioRef.current) {
       const source = getCurrentAudioSource();
       if (source) {
+        console.log('🎵 [AudioWaveform] Setting initial audio source:', source);
         audioRef.current.src = source;
       }
     }
@@ -125,11 +136,25 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
   }, [hasOnlyNonMusic]);
 
   const handleMusicToggle = useCallback(async () => {
+    console.log('🎵 [AudioWaveform] handleMusicToggle called', {
+      hasBothVersions,
+      isMusicEnabled,
+      currentMusicSrc: getActiveAd()?.musicAudioSrc,
+      currentNonMusicSrc: getActiveAd()?.nonMusicAudioSrc,
+      isPlaying: audioRef.current ? !audioRef.current.paused : 'no-ref'
+    });
+    
     const activeAd = getActiveAd()
     if (!audioRef.current || !hasBothVersions || !activeAd || activeAd.musicAudioSrc === "pending") return;
     
     const currentTimeStamp = audioRef.current.currentTime;
     const wasPlaying = !audioRef.current.paused;
+    
+    console.log('🎵 [AudioWaveform] Music toggle state before change', {
+      currentTimeStamp,
+      wasPlaying,
+      currentSrc: audioRef.current.src
+    });
     
     if (wasPlaying) {
       pause();
@@ -138,25 +163,32 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
     const newIsMusicEnabled = !isMusicEnabled;
     setIsMusicEnabled(newIsMusicEnabled);
     
-    setTimeout(async () => {
+    setTimeout(() => {
       const newSource = newIsMusicEnabled ? activeAd.musicAudioSrc : activeAd.nonMusicAudioSrc;
+      
+      console.log('🎵 [AudioWaveform] Switching to new source', {
+        newIsMusicEnabled,
+        newSource,
+        wasPlaying
+      });
       
       if (newSource && typeof newSource === 'string' && audioRef.current) {
         resetAudio();
         
         audioRef.current.src = newSource;
         
-        const handleLoadedMetadata = async () => {
+        const handleLoadedMetadata = () => {
+          console.log('🎵 [AudioWaveform] handleLoadedMetadata in toggle', {
+            currentTime: audioRef.current?.currentTime,
+            restoring: currentTimeStamp
+          });
+          
           if (audioRef.current) {
-            audioRef.current.removeEventListener('loadedmetadata', handleLoadedMetadata);
             audioRef.current.currentTime = currentTimeStamp;
-            
-            // Reinitialize AudioContext with new source
-            if (isInitialized) {
-              await reinitializeAudio();
-            }
+            audioRef.current.removeEventListener('loadedmetadata', handleLoadedMetadata);
             
             if (wasPlaying) {
+              console.log('🎵 [AudioWaveform] Resuming playback after toggle');
               setTimeout(() => play(), 100);
             }
           }
@@ -177,9 +209,7 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
     resetAudio,
     switchAudioSource, 
     hasBothVersions,
-    getActiveAd,
-    isInitialized,
-    reinitializeAudio
+    getActiveAd
   ]);
 
   const drawWaveformPath2D = useCallback(() => {
@@ -328,60 +358,68 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
   }, [dataArray])
 
   useEffect(() => {
-    const handleSourceChange = async () => {
-      if (!audioRef.current || activeIndex === null) return;
-
+    console.log('🔄 [AudioWaveform] Auto source switch useEffect triggered', {
+      activeIndex,
+      musicAudioSrc,
+      nonMusicAudioSrc,
+      isMusicEnabled,
+      hasAudioRef: !!audioRef.current,
+      currentAudioSrc: audioRef.current?.src
+    });
+    
+    if (audioRef.current && activeIndex !== null) {
       const preferredSource = getCurrentAudioSource();
       const currentSrc = audioRef.current.src;
       
+      console.log('🔄 [AudioWaveform] Source comparison', {
+        preferredSource,
+        currentSrc,
+        needsSwitch: preferredSource && currentSrc !== preferredSource
+      });
+      
       if (preferredSource && currentSrc !== preferredSource) {
-        const wasPlaying = !audioRef.current.paused;
-        const currentTimeStamp = audioRef.current.currentTime;
+        const wasPlaying = audioRef.current && !audioRef.current.paused;
+        const currentTimeStamp = audioRef.current ? audioRef.current.currentTime : 0;
         
-        // Pause the audio before switching
-        if (wasPlaying) {
-          pause();
-        }
-
-        // Reset audio state
+        console.log('🔄 [AudioWaveform] AUTO SWITCHING SOURCE', {
+          from: currentSrc,
+          to: preferredSource,
+          wasPlaying,
+          currentTimeStamp
+        });
+        
         resetAudio();
 
-        // Change the source
         audioRef.current.src = preferredSource;
         
-        const handleLoadedMetadata = async () => {
-          if (!audioRef.current) return;
+        const handleLoadedMetadata = () => {
+          console.log('🔄 [AudioWaveform] handleLoadedMetadata in auto switch', {
+            currentTime: audioRef.current?.currentTime,
+            restoring: currentTimeStamp,
+            wasPlaying
+          });
           
-          // Remove the listener to prevent memory leaks
-          audioRef.current.removeEventListener('loadedmetadata', handleLoadedMetadata);
-          
-          // Restore the timestamp
-          audioRef.current.currentTime = currentTimeStamp;
-          
-          // Reinitialize AudioContext with new source
-          if (isInitialized) {
-            await reinitializeAudio();
-          }
-          
-          // Resume playback if it was playing before
-          if (wasPlaying) {
-            setTimeout(() => {
-              play();
-            }, 100);
+          if (audioRef.current) {
+            audioRef.current.currentTime = currentTimeStamp;
+            audioRef.current.removeEventListener('loadedmetadata', handleLoadedMetadata);
+            
+            if (wasPlaying) {
+              console.log('🔄 [AudioWaveform] AUTO RESUMING playback after switch');
+              setTimeout(() => {
+                play();
+              }, 100);
+            }
           }
         };
         
         audioRef.current.addEventListener('loadedmetadata', handleLoadedMetadata);
         audioRef.current.load();
         
-        // Update the source tracking in store
         if (switchAudioSource) {
           switchAudioSource(preferredSource);
         }
       }
-    };
-
-    handleSourceChange();
+    }
   }, [
     activeIndex, 
     musicAudioSrc, 
@@ -389,11 +427,8 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
     isMusicEnabled, 
     getCurrentAudioSource, 
     resetAudio, 
-    play,
-    pause,
-    switchAudioSource,
-    isInitialized,
-    reinitializeAudio
+    play, 
+    switchAudioSource
   ]);
 
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
