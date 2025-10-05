@@ -64,21 +64,17 @@ async def generate_ad_speech(
                 forced_alignment.words
             )
 
-        response_data = {
-            "type": "speech",
-            "index": index,
+        # Return all the data instead of sending via websocket
+        return {
+            "audio_buffer": audio_buffer,
             "transcript": transcript_data.transcript,
             "translations": translation.split("\n") if translation else None,
             "alignments": sentence_alignment
         }
-
-        message_bytes = get_message_bytes(response_data, audio_buffer.getvalue())
-
-        await websocket.send_bytes(message_bytes)
-        return audio_buffer
         
     except Exception as e:
         logger.error(f"Error in [generate_ad_speech] for index {index}: {e}")
+        raise
 
 async def step_generate_speech(
     websocket: WebSocket,
@@ -88,14 +84,14 @@ async def step_generate_speech(
 ) -> StepResult:
     """Step 3: Generate speech."""
     try:
-        speech_buffer = await generate_ad_speech(
+        speech_data = await generate_ad_speech(
             websocket,
             state.index,
             transcript_results,
             voice_data
         )
 
-        if not speech_buffer:
+        if not speech_data:
             return StepResult(
                 status=StepStatus.FAILED,
                 error="Speech generation failed",
@@ -104,7 +100,7 @@ async def step_generate_speech(
 
         return StepResult(
             status=StepStatus.SUCCESS,
-            data=speech_buffer,
+            data=speech_data,  # Now contains dict with audio_buffer, transcript, translations, alignments
             step_name="speech"
         )
 

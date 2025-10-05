@@ -21,6 +21,19 @@ def get_message_bytes(metadata: dict, audio_bytes: bytes) -> bytes:
 
     return message
 
+def get_dual_audio_message_bytes(metadata: dict, speech_audio_bytes: bytes, merged_audio_bytes: bytes) -> bytes:
+    """
+    Create a message with metadata and TWO audio blobs (speech-only and merged).
+    Format: [metadata_length][metadata][speech_length][speech_audio][merged_audio]
+    """
+    meta_json = json.dumps(metadata)
+    meta_bytes = meta_json.encode('utf-8')
+    meta_length = struct.pack('<I', len(meta_bytes))
+    speech_length = struct.pack('<I', len(speech_audio_bytes))
+    
+    message = meta_length + meta_bytes + speech_length + speech_audio_bytes + merged_audio_bytes
+    return message
+
 async def safe_send_websocket_message(websocket: WebSocket, message: dict):
     """Safely send websocket message with connection handling."""
     try:

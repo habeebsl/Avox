@@ -141,46 +141,24 @@ const useAudioStore = create<AudioState>((set, get) => ({
   },
 
   play: async () => {
-    const { audioElement, audioContext, isPlaying } = get();
-    console.log('▶️ [audioStore] play() called', {
-      hasAudioElement: !!audioElement,
-      audioContextState: audioContext?.state,
-      currentIsPlaying: isPlaying,
-      audioSrc: audioElement?.src,
-      audioPaused: audioElement?.paused,
-      audioReadyState: audioElement?.readyState
-    });
-    
-    if (!audioElement) {
-      console.warn('⚠️ [audioStore] Cannot play - no audio element');
-      return;
-    }
+    const { audioElement, audioContext } = get();
+    if (!audioElement) return;
 
     if (audioContext?.state === 'suspended') {
-      console.log('🔊 [audioStore] Resuming suspended audio context');
       await audioContext.resume();
     }
 
     try {
-      console.log('▶️ [audioStore] Calling audioElement.play()');
       await audioElement.play();
-      console.log('✅ [audioStore] audioElement.play() succeeded');
     } catch (error) {
-      console.error('❌ [audioStore] Play failed:', error);
+      console.error('Play failed:', error);
     }
   },
 
   pause: () => {
     const { audioElement } = get();
-    console.log('⏸️ [audioStore] pause() called', {
-      hasAudioElement: !!audioElement,
-      audioPaused: audioElement?.paused,
-      currentTime: audioElement?.currentTime
-    });
-    
     if (audioElement) {
       audioElement.pause();
-      console.log('✅ [audioStore] audioElement.pause() executed');
     }
   },
 
@@ -209,18 +187,10 @@ const useAudioStore = create<AudioState>((set, get) => ({
   },
 
   resetAudio: () => {
-    const { audioElement, isPlaying } = get();
-    console.log('🔄 [audioStore] resetAudio() called', {
-      hasAudioElement: !!audioElement,
-      currentIsPlaying: isPlaying,
-      currentTime: audioElement?.currentTime,
-      audioPaused: audioElement?.paused
-    });
-    
+    const { audioElement } = get();
     if (audioElement) {
       audioElement.pause();
       audioElement.currentTime = 0;
-      console.log('✅ [audioStore] Audio reset - paused and seeked to 0');
     }
     
     set({
@@ -229,8 +199,6 @@ const useAudioStore = create<AudioState>((set, get) => ({
       isLoading: true,
       duration: 0,
     });
-    
-    console.log('✅ [audioStore] Store state reset');
   },
 }));
 

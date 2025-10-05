@@ -27,16 +27,11 @@ async def merge_ad_with_music(
         if not merged_buffer:
             raise ValueError("Audio mixing failed")
 
-        merged_data = {
-            "type": "merged",
-            "index": index
-        }
-
-        response_bytes = get_message_bytes(merged_data, merged_buffer.getvalue())
-
-        await websocket.send_bytes(response_bytes)
+        # Just return the merged buffer instead of sending via websocket
+        return merged_buffer
     except Exception as e:
         logger.error(f"Error in [merge_ad_with_music] for index {index}: {e}")
+        raise
 
 
 async def step_merge_audio(
@@ -47,11 +42,11 @@ async def step_merge_audio(
 ) -> StepResult:
     """Step 5: Merge audio."""
     try:
-        await merge_ad_with_music(websocket, state.index, speech_buffer, music_buffer)
+        merged_buffer = await merge_ad_with_music(websocket, state.index, speech_buffer, music_buffer)
         
         return StepResult(
             status=StepStatus.SUCCESS,
-            data=True,
+            data=merged_buffer,  # Return the actual merged buffer
             step_name="merge"
         )
 

@@ -29,7 +29,8 @@ export const ResponsePayload = z.object({
         z.literal("error"),
         z.literal("fatal_error"),
         z.literal("complete"),
-        z.literal("received")
+        z.literal("received"),
+        z.literal("audio_complete")  // New combined audio message type
     ]),
     message: z.string().optional(),
     index: z.number().optional(),
@@ -63,6 +64,14 @@ export const FinishedAdPayload = z.object({
 export const MergedAdPayload = z.object({
     type: z.literal("merged"),
     index: z.number()
+}).strip()
+
+export const AudioCompletePayload = z.object({
+    type: z.literal("audio_complete"),
+    index: z.number(),
+    transcript: z.string(),
+    translations: z.array(z.string()).nullable(),
+    alignments: z.array(sentenceAlignment)
 }).strip()
 
 export const AdErrorPayload = z.object({

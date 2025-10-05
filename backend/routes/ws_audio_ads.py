@@ -18,7 +18,8 @@ from utils.ws_utils.steps.transcript import step_generate_transcript
 from utils.ws_utils.ws_helpers import (
     ensure_voice_data_object, 
     safe_send_websocket_message, 
-    cleanup_custom_voice)
+    cleanup_custom_voice,
+    get_dual_audio_message_bytes)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -158,8 +159,30 @@ async def process_ad_with_granular_handling(
             state.music.status == StepStatus.SUCCESS):
             
             state.merge = await step_merge_audio(
-                websocket, state, state.speech.data, state.music.data
+                websocket, state, state.speech.data["audio_buffer"], state.music.data
             )
+            
+            # After merge succeeds, send BOTH audio versions in a single message
+            if state.merge.status == StepStatus.SUCCESS:
+                combined_metadata = {
+                    "type": "audio_complete",
+                    "index": index,
+                    "transcript": state.speech.data["transcript"],
+                    "translations": state.speech.data["translations"],
+                    "alignments": state.speech.data["alignments"]
+                }
+                
+                speech_bytes = state.speech.data["audio_buffer"].getvalue()
+                merged_bytes = state.merge.data.getvalue()
+                
+                message_bytes = get_dual_audio_message_bytes(
+                    combined_metadata,
+                    speech_bytes,
+                    merged_bytes
+                )
+                
+                await websocket.send_bytes(message_bytes)
+                logger.info(f"Sent combined audio message for index {index}")
         else:
             state.merge = StepResult(
                 StepStatus.SKIPPED,

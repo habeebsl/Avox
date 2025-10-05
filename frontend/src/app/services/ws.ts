@@ -5,6 +5,7 @@ import {
     SpeechResponsePayload, 
     FinishedAdPayload,
     MergedAdPayload,
+    AudioCompletePayload,
     AdErrorPayload
 } from "../schemas/ws.schemas";
 import useAdData from "../store/adDataStore";
@@ -122,20 +123,13 @@ export const wsService = {
                 const arrayBuffer = reader.result as ArrayBuffer;
                 const dataView = new DataView(arrayBuffer);
 
+                // Read metadata
                 const metaLength = dataView.getUint32(0, true);
                 const metaBytes = new Uint8Array(arrayBuffer, 4, metaLength);
                 const metadata = ResponsePayload.parse(
                     JSON.parse(new TextDecoder().decode(metaBytes))
                 );
                 console.log("Blob Metadata: ", metadata)
-
-                const audioBytes = arrayBuffer.slice(4 + metaLength);
-                const blob = new Blob([audioBytes], { type: "audio/mpeg" });
-                const audioUrl = URL.createObjectURL(blob);
-                console.log("Audio Url: ", audioUrl)
-
-
-                createdUrls.add(audioUrl);
 
                 const { updateAd, ads } = useAdData.getState();
                 let targetAd = null;
@@ -144,45 +138,79 @@ export const wsService = {
                     targetAd = ads.find(ad => ad.index === metadata.index);
                 }
 
-                switch (metadata.type) {
-                    case "speech":
-                        if (targetAd) {
-                            const speechData = SpeechResponsePayload.parse(metadata);
-                            console.log('🎤 [WebSocket] Received speech audio', {
-                                index: metadata.index,
-                                audioUrl,
-                                previousNonMusicSrc: targetAd.nonMusicAudioSrc
-                            });
-                            
-                            targetAd.nonMusicAudioSrc = audioUrl;
-                            targetAd.transcriptSents = speechData.alignments;
-                            
-                            if (speechData.translations) {
-                                console.log("Received Translations: ", speechData.translations)
-                                targetAd.englishTranscriptSents = speechData.transcript.split("\n");
-                            }
-
-                            console.log("Target Ad: ", targetAd)
-                        }
-                        break;
+                if (metadata.type === "audio_complete") {
+                    // New format: TWO audio blobs in one message
+                    // Format: [metadata_length][metadata][speech_length][speech_audio][merged_audio]
+                    const audioData = AudioCompletePayload.parse(metadata);
+                    let offset = 4 + metaLength;
                     
-                    case "merged":
-                        if (targetAd) {
-                            MergedAdPayload.parse(metadata);
-                            console.log('🎵 [WebSocket] Received merged (music) audio', {
-                                index: metadata.index,
-                                audioUrl,
-                                previousMusicSrc: targetAd.musicAudioSrc,
-                                currentNonMusicSrc: targetAd.nonMusicAudioSrc
-                            });
-                            
-                            targetAd.musicAudioSrc = audioUrl;
+                    // Read speech audio length
+                    const speechLength = dataView.getUint32(offset, true);
+                    offset += 4;
+                    
+                    // Extract speech audio
+                    const speechBytes = arrayBuffer.slice(offset, offset + speechLength);
+                    const speechBlob = new Blob([speechBytes], { type: "audio/mpeg" });
+                    const speechUrl = URL.createObjectURL(speechBlob);
+                    offset += speechLength;
+                    
+                    // Extract merged audio (remaining bytes)
+                    const mergedBytes = arrayBuffer.slice(offset);
+                    const mergedBlob = new Blob([mergedBytes], { type: "audio/mpeg" });
+                    const mergedUrl = URL.createObjectURL(mergedBlob);
+                    
+                    createdUrls.add(speechUrl);
+                    createdUrls.add(mergedUrl);
+                    
+                    if (targetAd) {
+                        targetAd.nonMusicAudioSrc = speechUrl;
+                        targetAd.musicAudioSrc = mergedUrl;
+                        targetAd.transcriptSents = audioData.alignments;
+                        
+                        if (audioData.translations) {
+                            console.log("Received Translations: ", audioData.translations)
+                            targetAd.englishTranscriptSents = audioData.transcript.split("\n");
                         }
-                        break;
-                }
 
-                if (targetAd) {
-                    updateAd(targetAd);
+                        console.log("Target Ad (both audio versions): ", targetAd)
+                        updateAd(targetAd);
+                    }
+                } else {
+                    // Legacy format: single audio blob (backward compatibility)
+                    const audioBytes = arrayBuffer.slice(4 + metaLength);
+                    const blob = new Blob([audioBytes], { type: "audio/mpeg" });
+                    const audioUrl = URL.createObjectURL(blob);
+                    console.log("Audio Url: ", audioUrl)
+
+                    createdUrls.add(audioUrl);
+
+                    switch (metadata.type) {
+                        case "speech":
+                            if (targetAd) {
+                                const speechData = SpeechResponsePayload.parse(metadata);
+                                targetAd.nonMusicAudioSrc = audioUrl;
+                                targetAd.transcriptSents = speechData.alignments;
+                                
+                                if (speechData.translations) {
+                                    console.log("Received Translations: ", speechData.translations)
+                                    targetAd.englishTranscriptSents = speechData.transcript.split("\n");
+                                }
+
+                                console.log("Target Ad: ", targetAd)
+                            }
+                            break;
+                        
+                        case "merged":
+                            if (targetAd) {
+                                MergedAdPayload.parse(metadata);
+                                targetAd.musicAudioSrc = audioUrl;
+                            }
+                            break;
+                    }
+
+                    if (targetAd) {
+                        updateAd(targetAd);
+                    }
                 }
             };
             
