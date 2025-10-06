@@ -34,7 +34,6 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
   const progressRef = useRef<HTMLDivElement>(null);
   const glassBallRef = useRef<HTMLDivElement>(null);
   
-  // Local state for audio analysis and music toggle
   const [isDragging, setIsDragging] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
   const [isMusicEnabled, setIsMusicEnabled] = useState(true);
@@ -53,7 +52,6 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
   const musicAudioSrc = activeAd?.musicAudioSrc;
   const nonMusicAudioSrc = activeAd?.nonMusicAudioSrc;
 
-  // Get audio availability info
   const audioSources = activeIndex !== null ? getAvailableAudioSources(activeIndex) : 
     { musicAvailable: false, nonMusicAvailable: false, hasAnyAudio: false };
   
@@ -61,12 +59,10 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
   const hasOnlyMusic = audioSources.musicAvailable && !audioSources.nonMusicAvailable;
   const hasOnlyNonMusic = !audioSources.musicAvailable && audioSources.nonMusicAvailable;
 
-  // Get loading and error states
   const isLoadingAudio = activeIndex !== null ? getAdLoadingState(activeIndex) : false;
   const isErrorAudio = activeIndex !== null ? getAdErrorState(activeIndex) : false;
   const hasAnyAudio = activeIndex !== null ? hasAdWithAudio(activeIndex) : false;
 
-  // Determine the current audio source
   const getCurrentAudioSource = useCallback(() => {
     const isValidSource = (src: any): src is string => 
       typeof src === 'string' && src !== 'pending' && src !== 'error';
@@ -96,7 +92,6 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
     resetAudio
   } = useAudioStore();
 
-  // Register audio element with store
   useEffect(() => {
     if (audioRef.current) {
       const cleanup = registerAudio(audioRef.current);
@@ -104,13 +99,11 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
     }
   }, [registerAudio]); // No activeIndex dependency!
 
-  // Handle track switching in a separate effect
   useEffect(() => {
     if (!audioRef.current) return;
     
     const source = getCurrentAudioSource();
     
-    // Only update source if it's valid and different
     if (source && 
         source !== "pending" && 
         source !== "error" && 
@@ -118,19 +111,15 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
       
       console.log(`AudioWaveform: Switching to track source`);
       
-      // Always pause before changing source
       audioRef.current.pause();
       
-      // Update source
       audioRef.current.src = source;
       audioRef.current.load();
       
-      // Reset to beginning
       audioRef.current.currentTime = 0;
     }
   }, [activeIndex, getCurrentAudioSource]);
 
-  // Set initial music state based on available versions
   useEffect(() => {
     if (hasOnlyNonMusic) {
       setIsMusicEnabled(false);
@@ -207,7 +196,6 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
       totalVolume += Math.abs(smoothed[i] - 128);
     }
     
-    // Calculate audio level for glass ball scaling
     const avgVolume = totalVolume / dataArray.length;
     const normalizedLevel = Math.min(1, avgVolume / 50);
     setAudioLevel(normalizedLevel);
@@ -291,7 +279,6 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
     setIsDragging(false);
   }, []);
 
-  // Global mouse event listeners for dragging
   useEffect(() => {
     if (isDragging) {
       document.addEventListener('mousemove', handleMouseMove);
@@ -335,8 +322,6 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
     }
   }, [dataArray])
 
-  // Removed the problematic reactive audio switching useEffect
-  // Now audio sources arrive atomically, no need for reactive updates
 
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
 
