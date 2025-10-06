@@ -29,6 +29,7 @@ interface AudioState {
   play: () => Promise<void>;
   pause: () => void;
   switchAudioSource: (newSource: string) => void;
+  switchTrack: (autoPlay?: boolean) => void;
   reset: () => void;
   resetAudio: () => void;
 }
@@ -164,6 +165,39 @@ const useAudioStore = create<AudioState>((set, get) => ({
 
   switchAudioSource: (newSource) => {
     set({ currentSource: newSource });
+  },
+
+  switchTrack: (autoPlay = false) => {
+    const { audioElement, audioContext } = get();
+    if (!audioElement) return;
+    
+    // Pause current audio
+    audioElement.pause();
+    set({ isPlaying: false });
+    
+    // Reset time to beginning
+    audioElement.currentTime = 0;
+    set({ currentTime: 0 });
+    
+    // If autoPlay requested, schedule it after a short delay to allow source to load
+    if (autoPlay) {
+      setTimeout(async () => {
+        const currentAudio = get().audioElement;
+        if (currentAudio && currentAudio.readyState >= 2) {
+          // Resume audio context if suspended
+          if (audioContext?.state === 'suspended') {
+            await audioContext.resume();
+          }
+          
+          try {
+            await currentAudio.play();
+            set({ isPlaying: true });
+          } catch (error) {
+            console.error('Error playing audio after track switch:', error);
+          }
+        }
+      }, 150);
+    }
   },
 
   reset: () => {

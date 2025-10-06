@@ -26,7 +26,7 @@ export const AdCube: React.FC<AdCubeProps> = ({
     activeIndex
   } = useAdData()
 
-  const { isPlaying, pause, play } = useAudioStore()
+  const { isPlaying, pause, play, switchTrack } = useAudioStore()
   const { setActiveTrack, handleTrackUpdate } = useNotificationStore()
   
   const currentAd = ads[index];
@@ -58,18 +58,15 @@ export const AdCube: React.FC<AdCubeProps> = ({
   }, [currentAd?.musicAudioSrc, currentAd?.nonMusicAudioSrc, index, handleTrackUpdate]);
      
   // Handler for clicking the container (just switch view, stop playback)
-  const handleContainerClick = async (e: React.MouseEvent) => {
-    e.stopPropagation() // Prevent bubbling
-    
-    // If we're switching to a new track while something is playing
-    if (activeIndex !== index && isPlaying) {
-      // Pause any playing audio first
-      pause()
-    }
-    
+  const handleContainerClick = () => {
     // Switch to the new track (UI only)
     setActiveTrack(index)
     setActiveIndex(index)
+    
+    // If currently playing, stop playback but don't auto-play new track
+    if (isPlaying) {
+      switchTrack(false) // Switch without auto-play
+    }
   }
 
   // Handler for clicking the play button (control playback)
@@ -79,16 +76,9 @@ export const AdCube: React.FC<AdCubeProps> = ({
     setActiveTrack(index)
     
     if (activeIndex !== index) {
-      // Switching to a different track
-      if (isPlaying) {
-        pause() // Pause current track
-      }
-      setActiveIndex(index) // Switch to new track
-      
-      // Give time for audio source to update, then play
-      setTimeout(() => {
-        play()
-      }, 150)
+      // Switching to a different track - switch and auto-play
+      setActiveIndex(index)
+      switchTrack(true) // Switch with auto-play
     } else {
       // Same track - just toggle play/pause
       if (isPlaying) {

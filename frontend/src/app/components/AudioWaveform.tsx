@@ -102,9 +102,9 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
       const cleanup = registerAudio(audioRef.current);
       return cleanup;
     }
-  }, [registerAudio]); // ← Removed activeIndex dependency!
+  }, [registerAudio]); // No activeIndex dependency!
 
-  // Add a separate effect to handle track switching without re-registering
+  // Handle track switching in a separate effect
   useEffect(() => {
     if (!audioRef.current) return;
     
@@ -116,10 +116,10 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
         source !== "error" && 
         audioRef.current.src !== source) {
       
-      // Pause if playing
-      if (isPlaying) {
-        pause();
-      }
+      console.log(`AudioWaveform: Switching to track source`);
+      
+      // Always pause before changing source
+      audioRef.current.pause();
       
       // Update source
       audioRef.current.src = source;
@@ -127,11 +127,8 @@ const SmoothSplineWaveform: React.FC<SmoothSplineWaveformProps> = ({
       
       // Reset to beginning
       audioRef.current.currentTime = 0;
-      
-      // Reset audio store state
-      resetAudio();
     }
-  }, [activeIndex, getCurrentAudioSource, isPlaying, pause, resetAudio]);
+  }, [activeIndex, getCurrentAudioSource]);
 
   // Set initial music state based on available versions
   useEffect(() => {
